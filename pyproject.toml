@@ -1,0 +1,67 @@
+[tool.poetry]
+name = "trickkiste"
+version = "0.0.1"
+description = "Random useful stuff"
+authors = ["Frans Fürst <frans.fuerst+gitlab@protonmail.com>"]
+repository = "https://projects.om-office.de/frans/trickkiste.git"
+readme = "Readme.md"
+packages = [
+  {include = "trickkiste"},
+  # {include = "trickkiste/py.typed"},
+]
+
+[tool.poetry.scripts]
+
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4"
+
+
+[tool.poetry.dev-dependencies]
+black = "^22"
+isort = "^5"
+pytest = "^7"
+pytest-cov = "^3"
+mypy = "^1.6"
+pylint = "^2"
+ipython = "^8"
+twine = "^4"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+include = '\.pyi?$'
+target-version = ['py310']
+fast = true
+exclude = '''
+(
+  /(                        # exclude a few common directories in the
+    \.git                   # root of the project
+    | \.pytest_cache
+    | \.venv
+    | \.container_home_dir
+    | build
+    | dist
+  ))
+'''
+
+[tool.isort]
+profile = "black"
+skip_glob = [".venv", ".container_home_dir"]
+
+[tool.mypy]
+strict="True"
+disallow_untyped_defs = "True"
+disallow_any_unimported = "True"
+no_implicit_optional = "True"
+check_untyped_defs = "True"
+warn_return_any = "True"
+warn_unused_ignores = "True"
+show_error_codes = "True"
+exclude = [
+    '\.venv',
+    'tests'
+]

@@ -1,0 +1,8 @@
+__pycache__
+*~
+~*
+/.container_home_dir
+*.log
+/dist
+/build
+*.wpu
