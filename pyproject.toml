@@ -11,6 +11,7 @@ packages = [
 ]
 
 [tool.poetry.scripts]
+suppress = 'trickkiste.std_suppress:main'
 
 
 [tool.poetry.dependencies]
