@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 
-from asyncio import (
-    run,
-    gather,
-    wait_for,
-    Queue,
-    create_subprocess_exec,
-    TimeoutError as AsyncTimeoutError,
-    StreamReader,
-)
-from asyncio.subprocess import Process, PIPE
-import sys
-from contextlib import suppress
+"""Runs a process but suppress output if it returns successfully before a given amount of time"""
+
 import signal
-from typing import Optional, TextIO, Sequence
+import sys
+from asyncio import Queue, StreamReader
+from asyncio import TimeoutError as AsyncTimeoutError
+from asyncio import create_subprocess_exec, gather, run, wait_for
+from asyncio.subprocess import PIPE, Process
+from contextlib import suppress
+from typing import Optional, Sequence, TextIO
 
 LineQueue = Queue[Optional[tuple[TextIO, bytes]]]
 
@@ -32,9 +28,7 @@ async def print_after(
         out_file.write(line.decode(errors="replace"))
 
 
-async def buffer_stream(
-    stream: StreamReader, buffer: LineQueue, out_file: TextIO
-) -> None:
+async def buffer_stream(stream: StreamReader, buffer: LineQueue, out_file: TextIO) -> None:
     """Records a given stream to a buffer line by line along with the source"""
     while line := await stream.readline():
         await buffer.put((out_file, line))

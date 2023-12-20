@@ -19,6 +19,12 @@ python = ">=3.10,<4"
 
 
 [tool.poetry.dev-dependencies]
+# those are actual dependencies but a package requiring trickkiste should list it explicitly
+rich = "^13"
+textual = "^0.46"
+
+#[tool.poetry.dev-dependencies]
+# and here come the actual dev-dependencies
 black = "^22"
 isort = "^5"
 pytest = "^7"
