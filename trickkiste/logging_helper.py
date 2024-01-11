@@ -44,7 +44,7 @@ def setup_logging(logger: logging.Logger, level: str | int = "INFO") -> None:
             kwargs.setdefault("extra", {})["stack"] = stack_str(5)  # type: ignore[index]
             return super().makeRecord(*args, **kwargs)  # type: ignore[no-any-return]
 
-    logging.setLoggerClass(CustomLogger)
+    # logging.setLoggerClass(CustomLogger)
 
     used_level = getattr(logging, level.split("_")[-1]) if isinstance(level, str) else level
 
