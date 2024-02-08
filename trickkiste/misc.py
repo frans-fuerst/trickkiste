@@ -8,6 +8,7 @@ import os
 import shlex
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager, suppress
+from datetime import datetime
 from pathlib import Path
 from subprocess import DEVNULL, check_output
 
@@ -39,14 +40,54 @@ def cwd(path: Path) -> Iterator[None]:
         os.chdir(prev_cwd)
 
 
-def dur_str(seconds: int) -> str:
-    """Turns a number of seconds into a string like 1d:2h:3m"""
-    if not seconds:
+def dur_str(seconds: float, fixed: bool = False) -> str:
+    """Turns a duration defined by @seconds into a string like '1d:2h:3m'
+    If @fixed is True, numbers will be 0-padded for uniform width.
+    Negative values for @seconds are not supported (yet)
+    >>> dur_str(42)
+    '42s'
+    >>> dur_str(12345)
+    '3h:25m:45s'
+    """
+    if not fixed and not seconds:
         return "0s"
-    days = f"{seconds//86400:d}d" if seconds >= 86400 else ""
-    hours = f"{seconds//3600%24:d}h" if seconds >= 3600 and (seconds % 86400) else ""
-    minutes = f"{seconds//60%60:d}m" if 86400 > seconds and (seconds % 3600) else ""
-    return ":".join(e for e in (days, hours, minutes) if e)
+    digits = 2 if fixed else 1
+    days = f"{seconds//86400:0{digits}d}d" if fixed or seconds >= 86400 else ""
+    hours = (
+        f"{seconds//3600%24:0{digits}d}h" if fixed or seconds >= 3600 and (seconds % 86400) else ""
+    )
+    minutes = f"{seconds//60%60:0{digits}d}m" if fixed or seconds >= 60 and (seconds % 3600) else ""
+    seconds_str = (
+        f"{seconds%60:0{digits}d}s" if not fixed and ((seconds % 60) or seconds == 0) else ""
+    )
+    return ":".join(e for e in (days, hours, minutes, seconds_str) if e)
+
+
+def age_str(now: float | datetime, age: None | int | datetime, fixed: bool = False) -> str:
+    """Turn a number of seconds into something human readable
+    >>> age_str(1700000000, 1600000000)
+    '1157d:9h:46m:40s'
+    """
+    if age is None:
+        return "--"
+    age_ts = age.timestamp() if isinstance(age, datetime) else age
+    now_ts = now.timestamp() if isinstance(now, datetime) else now
+    if (age_ts or now_ts) <= 0.0:
+        return "--"
+    return dur_str(now_ts - age_ts, fixed=fixed)
+
+
+def date_str(timestamp: int | datetime, datefmt: str = "%Y.%m.%d-%H:%M:%S") -> str:
+    """Returns a uniform time string from a timestamp or a datetime
+    >>> date_str(datetime.strptime("1980.01.04-12:55:02", "%Y.%m.%d-%H:%M:%S"))
+    '1980.01.04-12:55:02'
+    """
+    if not timestamp:
+        return "--"
+    date_dt = timestamp if isinstance(timestamp, datetime) else datetime.fromtimestamp(timestamp)
+    if date_dt.year < 1000:
+        return "--"
+    return (date_dt).strftime(datefmt)
 
 
 def split_params(string: str) -> Mapping[str, str]:
