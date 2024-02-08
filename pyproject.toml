@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "trickkiste"
-version = "0.0.6"
+version = "0.0.7"
 description = "Random useful stuff"
 authors = ["Frans Fürst <frans.fuerst+gitlab@protonmail.com>"]
 repository = "https://projects.om-office.de/frans/trickkiste.git"
