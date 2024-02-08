@@ -6,13 +6,26 @@ import logging
 import os
 import sys
 import traceback
+from argparse import ArgumentParser
 from collections.abc import Iterable
 
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.markup import escape as markup_escape
 
-LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+LOG_LEVELS = ("ALL_DEBUG", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL")
+
+
+def apply_common_logging_cli_args(parser: ArgumentParser) -> None:
+    """Decorates given @parser with arguments for logging"""
+    parser.add_argument(
+        "--log-level",
+        "-l",
+        choices=LOG_LEVELS,
+        help="Sets the logging level - ALL_DEBUG sets all other loggers to DEBUG, too",
+        type=str.upper,
+        default="INFO",
+    )
 
 
 def stack_str(depth: int = 0) -> str:
@@ -33,10 +46,12 @@ def stack_str(depth: int = 0) -> str:
     return ">".join(reversed(list(stack_fns())))
 
 
-def setup_logging(logger: logging.Logger, level: str | int = "INFO") -> None:
+def setup_logging(logger: logging.Logger | str, level: str | int = "INFO") -> None:
     """Make logging fun"""
 
-    class CustomLogger(logging.getLoggerClass()):  # type: ignore[misc]
+    class CustomLogger(  # pylint: disable=unused-variable
+        logging.getLoggerClass()  # type: ignore[misc]
+    ):
         """Injects the 'stack' element"""
 
         def makeRecord(self, *args: object, **kwargs: object) -> logging.LogRecord:
@@ -44,12 +59,17 @@ def setup_logging(logger: logging.Logger, level: str | int = "INFO") -> None:
             kwargs.setdefault("extra", {})["stack"] = stack_str(5)  # type: ignore[index]
             return super().makeRecord(*args, **kwargs)  # type: ignore[no-any-return]
 
+    # currently this introduces more problems then benefits
     # logging.setLoggerClass(CustomLogger)
 
+    # log level for everything
+    root_log_level = logging.DEBUG if level == "ALL_DEBUG" else logging.WARNING
+
+    # log level for provided @logger
     used_level = getattr(logging, level.split("_")[-1]) if isinstance(level, str) else level
 
     if not logging.getLogger().hasHandlers():
-        logging.getLogger().setLevel(logging.WARNING)
+        logging.getLogger().setLevel(root_log_level)
         shandler = RichHandler(
             show_time=False,
             show_path=False,
@@ -59,7 +79,7 @@ def setup_logging(logger: logging.Logger, level: str | int = "INFO") -> None:
             ),
         )
         logging.getLogger().addHandler(shandler)
-        shandler.setLevel(used_level)
+        shandler.setLevel(min(used_level, root_log_level))
         shandler.setFormatter(logging.Formatter("│ [grey]%(name)-15s[/] │ [bold]%(message)s[/]"))
 
         # logging.basicConfig(
@@ -81,4 +101,4 @@ def setup_logging(logger: logging.Logger, level: str | int = "INFO") -> None:
     #    logging.addLevelName(getattr(logging, lev), f"{lev[0] * 2}")
 
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
-    logger.setLevel(used_level)
+    (logging.getLogger(logger) if isinstance(logger, str) else logger).setLevel(used_level)
