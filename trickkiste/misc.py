@@ -5,6 +5,7 @@
 import hashlib
 import logging
 import os
+import re
 import shlex
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager, suppress
@@ -88,6 +89,45 @@ def date_str(timestamp: int | datetime, datefmt: str = "%Y.%m.%d-%H:%M:%S") -> s
     if date_dt.year < 1000:
         return "--"
     return (date_dt).strftime(datefmt)
+
+
+def parse_age(string: str) -> int:
+    """Return seconds extracted from something parsable as an age ('3d:4h')
+    >>> parse_age("3600")
+    3600
+    >>> parse_age("3h")
+    10800
+    >>> parse_age("1d:10h")
+    122400
+    >>> parse_age("1d10h")
+    122400
+    >>> parse_age("1.5d")
+    129600
+    """
+    number = r"\d*(?:\.(?:\d*)?)?"
+    with suppress(ValueError):
+        return int(string)
+    if match := re.match(
+        (
+            "(?i)^"
+            f"(?:({number})d)?"
+            "(?::)?"
+            f"(?:({number})h)?"
+            "(?::)?"
+            f"(?:({number})m)?"
+            "(?::)?"
+            f"(?:({number})s)?$"
+        ),
+        string,
+    ):
+        days, hours, mins, secs = match.groups()
+        return int(
+            float(days or "0") * 86400
+            + float(hours or "0") * 3600
+            + float(mins or "0") * 60
+            + float(secs or "0")
+        )
+    raise ValueError(f"Cannot turn {string!r} into duration")
 
 
 def split_params(string: str) -> Mapping[str, str]:
