@@ -130,12 +130,34 @@ def parse_age(string: str) -> int:
     raise ValueError(f"Cannot turn {string!r} into duration")
 
 
+def smart_split(string: str, delimiter: str = ",") -> Iterator[str]:
+    """Like str.split but takes quotes and parenthesis into account
+    >>> list(smart_split("(=,),'a=x',\\"b=y\\""))
+    ['(=,)', "'a=x'", '"b=y"']
+    """
+    splits: list[int] = []
+    closers: list[str] = []
+    parenthizers = {'"': '"', "'": "'", "[": "]", "(": ")"}
+    for i, char in enumerate(string):
+        if char == delimiter and not closers:
+            splits.append(i)
+        elif closers and char == closers[-1]:
+            closers.pop()
+        elif char in parenthizers:
+            closers.append(parenthizers[char])
+    start = 0
+    for pos in splits:
+        yield string[start:pos]
+        start = pos + 1
+    yield string[start:]
+
+
 def split_params(string: str) -> Mapping[str, str]:
     """Splits a 'string packed map' into a dict
-    >>> split_params("foo=23,bar=42")
-    {'foo': '23', 'bar': '42'}
+    >>> split_params("foo=23,bar=42,true='pi=3,14'")
+    {'foo': '23', 'bar': '42', 'true': "'pi=3,14'"}
     """
-    return {k: v for p in string.split(",") if p for k, v in (p.split("="),)}
+    return {k: v for p in smart_split(string, ",") if p for k, v in (p.split("=", 1),)}
 
 
 def compact_dict(
