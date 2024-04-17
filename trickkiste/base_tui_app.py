@@ -26,8 +26,8 @@ def log() -> logging.Logger:
 class RichLogHandler(RichHandler):
     """Redirects rich.RichHanlder capabilities to a textual.RichLog"""
 
-    def __init__(self, widget: RichLog):
-        super().__init__(show_path=False, markup=True, show_time=False)
+    def __init__(self, widget: RichLog, level: int = logging.INFO):
+        super().__init__(show_path=False, markup=True, show_time=False, level=level)
         self.widget: RichLog = widget
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -62,6 +62,7 @@ class TuiBaseApp(App[None]):
         super().__init__()
         self._richlog = LockingRichLog()
         self._logger_funcname = logger_funcname
+        self._log_level: int | str = logging.INFO
 
     def add_default_arguments(self, parser: ArgumentParser) -> None:
         """Adds arguments to @parser we need in every app"""
@@ -87,9 +88,24 @@ class TuiBaseApp(App[None]):
                 datefmt="%Y-%m-%d %H:%M:%S",
             )
         )
+        self.set_log_level(self._log_level)
 
     def execute(self) -> None:
         """Wrapper for async run and optional cleanup if provided"""
         asyncio.run(self.run_async())
         if hasattr(self, "cleanup"):
             self.cleanup()
+
+    def set_log_level(self, level: int | str) -> None:
+        """Sets the overall log level for internal log console"""
+
+        # log level for everything
+        logging.getLogger().setLevel(logging.DEBUG if level == "ALL_DEBUG" else logging.WARNING)
+
+        # log level for provided @logger
+        used_level = getattr(logging, level.split("_")[-1]) if isinstance(level, str) else level
+
+        for handler in logging.getLogger().handlers:
+            handler.setLevel(used_level)
+
+        self._log_level = level
