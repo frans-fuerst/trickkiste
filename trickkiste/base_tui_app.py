@@ -89,6 +89,8 @@ class TuiBaseApp(App[None]):
             )
         )
         self.set_log_level(self._log_level)
+        if hasattr(self, "initialize"):
+            await self.initialize()
 
     def execute(self) -> None:
         """Wrapper for async run and optional cleanup if provided"""
