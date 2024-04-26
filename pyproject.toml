@@ -10,6 +10,9 @@ packages = [
   # {include = "trickkiste/py.typed"},
 ]
 
+# see https://pypi.org/project/poetry-bumpversion
+[tool.poetry_bumpversion.file."trickkiste/__init__.py"]
+
 [tool.poetry.scripts]
 suppress = 'trickkiste.std_suppress:main'
 
