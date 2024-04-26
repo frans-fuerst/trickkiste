@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from subprocess import DEVNULL, check_output
 
+from dateutil import tz
+
 
 def log() -> logging.Logger:
     """Returns the logger instance to use here"""
@@ -53,13 +55,17 @@ def dur_str(seconds: float, fixed: bool = False) -> str:
     if not fixed and not seconds:
         return "0s"
     digits = 2 if fixed else 1
-    days = f"{seconds//86400:0{digits}d}d" if fixed or seconds >= 86400 else ""
+    days = f"{int(seconds//86400):0{digits}d}d" if fixed or seconds >= 86400 else ""
     hours = (
-        f"{seconds//3600%24:0{digits}d}h" if fixed or seconds >= 3600 and (seconds % 86400) else ""
+        f"{int(seconds//3600%24):0{digits}d}h"
+        if fixed or seconds >= 3600 and (seconds % 86400)
+        else ""
     )
-    minutes = f"{seconds//60%60:0{digits}d}m" if fixed or seconds >= 60 and (seconds % 3600) else ""
+    minutes = (
+        f"{int(seconds//60%60):0{digits}d}m" if fixed or seconds >= 60 and (seconds % 3600) else ""
+    )
     seconds_str = (
-        f"{seconds%60:0{digits}d}s" if not fixed and ((seconds % 60) or seconds == 0) else ""
+        f"{int(seconds%60):0{digits}d}s" if not fixed and ((seconds % 60) or seconds == 0) else ""
     )
     return ":".join(e for e in (days, hours, minutes, seconds_str) if e)
 
@@ -89,6 +95,35 @@ def date_str(timestamp: int | datetime, datefmt: str = "%Y.%m.%d-%H:%M:%S") -> s
     if date_dt.year < 1000:
         return "--"
     return (date_dt).strftime(datefmt)
+
+
+def date_from(timestamp: int | float | str) -> None | datetime:
+    """
+    >>> str(date_from("2023-07-14T15:05:32.174200714+02:00"))
+    '2023-07-14 15:05:32+02:00'
+    >>> str(date_from("2023-07-24T21:25:26.89389821+02:00"))
+    '2023-07-24 21:25:26+02:00'
+    """
+    try:
+        if isinstance(timestamp, datetime):
+            return timestamp
+
+        if isinstance(timestamp, (int, float)):
+            return datetime.fromtimestamp(timestamp)
+
+        if timestamp[-1] == "Z":
+            return (
+                datetime.strptime(timestamp[:19], "%Y-%m-%dT%H:%M:%S")
+                .replace(tzinfo=tz.tzutc())
+                .astimezone(tz.tzlocal())
+            )
+        if re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2}$", timestamp):
+            timestamp = timestamp[:19] + timestamp[-6:]
+        return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S%z")
+    except OverflowError:
+        return None
+    except Exception as exc:  # pylint: disable=broad-except
+        raise ValueError(f"Could not parse datetime from <{timestamp!r}> ({exc})") from exc
 
 
 def parse_age(string: str) -> int:
