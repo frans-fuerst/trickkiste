@@ -9,11 +9,12 @@ from pathlib import Path
 
 from rich.logging import RichHandler
 from rich.markup import escape as markup_escape
+from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
 from textual.message import Message
 from textual.scrollbar import ScrollTo
-from textual.widgets import RichLog
+from textual.widgets import Label, RichLog
 
 from .logging_helper import LOG_LEVELS
 
@@ -63,6 +64,7 @@ class TuiBaseApp(App[None]):
         self._richlog = LockingRichLog()
         self._logger_funcname = logger_funcname
         self._log_level: int | str = logging.INFO
+        self._footer_label = Label(Text.from_markup("nonsense"), id="footer")
 
     def add_default_arguments(self, parser: ArgumentParser) -> None:
         """Adds arguments to @parser we need in every app"""
@@ -77,6 +79,7 @@ class TuiBaseApp(App[None]):
     def compose(self) -> ComposeResult:
         """Set up the UI"""
         yield self._richlog
+        yield self._footer_label
 
     async def on_mount(self) -> None:
         """UI entry point"""
@@ -92,17 +95,21 @@ class TuiBaseApp(App[None]):
         if hasattr(self, "initialize"):
             await self.initialize()
 
+    def update_status_bar(self, text: str) -> None:
+        """Convenience wrapper - should go to TUIBaseApp"""
+        self._footer_label.update(text)
+
     def execute(self) -> None:
         """Wrapper for async run and optional cleanup if provided"""
         asyncio.run(self.run_async())
         if hasattr(self, "cleanup"):
             self.cleanup()
 
-    def set_log_level(self, level: int | str) -> None:
+    def set_log_level(self, level: int | str, *, others_level: int | str = logging.WARNING) -> None:
         """Sets the overall log level for internal log console"""
 
         # log level for everything
-        logging.getLogger().setLevel(logging.DEBUG if level == "ALL_DEBUG" else logging.WARNING)
+        logging.getLogger().setLevel(logging.DEBUG if level == "ALL_DEBUG" else others_level)
 
         # log level for provided @logger
         used_level = getattr(logging, level.split("_")[-1]) if isinstance(level, str) else level
