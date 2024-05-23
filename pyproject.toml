@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "trickkiste"
-version = "0.0.10"
+version = "0.0.11"
 description = "Random useful stuff"
 authors = ["Frans Fürst <frans.fuerst+gitlab@protonmail.com>"]
 repository = "https://projects.om-office.de/frans/trickkiste.git"
@@ -11,6 +11,7 @@ packages = [
 ]
 
 # see https://pypi.org/project/poetry-bumpversion
+# poetry version patch [--dry-run]
 [tool.poetry_bumpversion.file."trickkiste/__init__.py"]
 
 [tool.poetry.scripts]
