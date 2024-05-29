@@ -61,7 +61,7 @@ class TuiBaseApp(App[None]):
 
     def __init__(self, logger_funcname: bool = True) -> None:
         super().__init__()
-        self._richlog = LockingRichLog()
+        self._richlog = LockingRichLog(id="app_log")
         self._logger_funcname = logger_funcname
         self._log_level: int | str = logging.INFO
         self._footer_label = Label(Text.from_markup("nonsense"), id="footer")

@@ -1,1 +1,9 @@
-RichLog {height: 20; border: solid grey;}
+#app_log {height: 15; border: solid grey;}
+#footer {
+    width: 100%;
+    background: $accent;
+    text-style: bold;
+    color: $text;
+    dock: bottom;
+    height: 1;
+}
