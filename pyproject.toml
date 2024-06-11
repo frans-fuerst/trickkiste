@@ -31,15 +31,15 @@ python-dateutil = "^2"
 
 #[tool.poetry.dev-dependencies]
 # and here come the actual dev-dependencies
-black = "^22"
-isort = "^5"
-pytest = "^7"
-pytest-cov = "^3"
-mypy = "^1.6"
-pylint = "^2"
-ipython = "^8"
-twine = "^4"
-pre-commit = "^3"
+black = "*"
+isort = "*"
+pytest = "*"
+pytest-cov = "*"
+mypy = "*"
+pylint = "*"
+ipython = "*"
+twine = "*"
+pre-commit = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
