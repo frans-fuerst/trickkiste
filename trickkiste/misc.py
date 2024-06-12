@@ -2,16 +2,20 @@
 
 """Mixed common stuff not big enough for a separate module"""
 
+import asyncio
 import hashlib
 import logging
 import os
 import re
 import shlex
-from collections.abc import Iterator, Mapping
+from collections.abc import Awaitable, Callable, Iterator, Mapping
+from concurrent.futures import Executor
 from contextlib import contextmanager, suppress
 from datetime import datetime
+from functools import partial, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
+from typing import ParamSpec, TypeVar
 
 from dateutil import tz
 
@@ -214,3 +218,24 @@ def compact_dict(
 def process_output(cmd: str) -> str:
     """Return command output as one blob"""
     return check_output(shlex.split(cmd), stderr=DEVNULL, text=True)
+
+
+R = TypeVar("R")
+P = ParamSpec("P")
+
+
+def asyncify(func: Callable[P, R]) -> Callable[P, Awaitable[R]]:
+    """Turns a synchronous function into an asynchronous one"""
+
+    @wraps(func)
+    async def run(
+        *args: P.args,
+        loop: None | asyncio.AbstractEventLoop = None,
+        executor: None | Executor = None,
+        **kwargs: P.kwargs,
+    ) -> R:
+        return await (loop or asyncio.get_event_loop()).run_in_executor(
+            executor, partial(func, *args, **kwargs)
+        )
+
+    return run  # type: ignore[return-value]  # (no clue yet how to solve this)
