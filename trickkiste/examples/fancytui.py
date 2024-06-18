@@ -14,15 +14,20 @@ from trickkiste.base_tui_app import TuiBaseApp
 
 def log() -> logging.Logger:
     """Returns the logger instance to use here"""
-    return logging.getLogger("trickkiste.example_tui")
+    return logging.getLogger("trickkiste.fancytui")
 
 
 class ExampleTUI(TuiBaseApp):
     """A little example TUI"""
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(logger_show_funcname=True, logger_show_tid=True, logger_show_name=True)
         self.tree_widget: Tree[None] = Tree("A Tree")
+
+    async def initialize(self) -> None:
+        """UI entry point"""
+        self.set_log_levels((log(), "DEBUG"), ("trickkiste", "INFO"), others_level="WARNING")
+        self.produce()
 
     def compose(self) -> ComposeResult:
         """Set up the UI"""
@@ -47,14 +52,14 @@ class ExampleTUI(TuiBaseApp):
             cpu_node.set_label("TBD")
             mem_node.set_label("TBD")
             disk_node.set_label("TBD")
-            await asyncio.sleep(5)
+            self.log_foo()
+            await asyncio.sleep(15)
 
-    async def on_mount(self) -> None:
-        """UI entry point"""
-        self.produce()
+    @work(exit_on_error=True, thread=True)
+    def log_foo(self) -> None:
+        """Some function executed in a separate thread"""
+        log().info("foo")
 
 
 if __name__ == "__main__":
-    logging.getLogger().setLevel(logging.WARNING)
-    log().setLevel(logging.DEBUG)
     ExampleTUI().execute()

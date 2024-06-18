@@ -5,12 +5,16 @@
 import logging
 from argparse import ArgumentParser
 
-from trickkiste.logging_helper import apply_common_logging_cli_args, setup_logging
+from trickkiste.logging_helper import (
+    apply_common_logging_cli_args,
+    set_log_levels,
+    setup_logging,
+)
 
 
 def log() -> logging.Logger:
     """Returns the logger instance to use here"""
-    return logging.getLogger(__name__)
+    return logging.getLogger("trickkiste.fancylogging")
 
 
 def main() -> None:
@@ -21,10 +25,25 @@ def main() -> None:
 
     setup_logging(log(), level=args.log_level)
 
-    log().debug("debug message")
-    log().info("info message")
-    log().warning("warning message")
-    log().error("error message")
+    set_log_levels("DEBUG")
+    set_log_levels(logging.DEBUG)
+    set_log_levels((log(), "DEBUG"))
+    set_log_levels(("trickkiste", "INFO"), (log(), "DEBUG"))
+
+    logging.getLogger().debug("foo")
+    logging.getLogger().info("foo")
+    logging.getLogger().warning("foo")
+    logging.getLogger().error("foo")
+
+    logging.getLogger("trickkiste").debug("debug")
+    logging.getLogger("trickkiste").info("info")
+    logging.getLogger("trickkiste").warning("warning")
+    logging.getLogger("trickkiste").error("error")
+
+    log().debug("debug")
+    log().info("info")
+    log().warning("warning")
+    log().error("error")
 
     logging.getLogger("other.module").debug("only shown with level=ALL_DEBUG")
     logging.getLogger("other.module").info("only shown with level=ALL_DEBUG")

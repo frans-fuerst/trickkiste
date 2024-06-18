@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 """A textual base app with common features like a logging window"""
+# pylint: disable=duplicate-code
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-instance-attributes
 
 import asyncio
 import logging
 from argparse import ArgumentParser
+from collections.abc import Sequence
 from pathlib import Path
 
 from rich.logging import RichHandler
@@ -16,7 +20,15 @@ from textual.message import Message
 from textual.scrollbar import ScrollTo
 from textual.widgets import Label, RichLog
 
-from .logging_helper import LOG_LEVELS
+from .logging_helper import (
+    LogLevelSpec,
+    apply_common_logging_cli_args,
+    callstack_filter,
+    logger_name_filter,
+    markup_escape_filter,
+    set_log_levels,
+    thread_id_filter,
+)
 
 
 def log() -> logging.Logger:
@@ -59,22 +71,29 @@ class TuiBaseApp(App[None]):
 
     CSS_PATH = Path(__file__).parent / "base_tui_app.css"
 
-    def __init__(self, logger_funcname: bool = True) -> None:
+    def __init__(
+        self,
+        logger_show_level: bool = True,
+        logger_show_time: bool = True,
+        logger_show_name: bool = True,
+        logger_show_callstack: bool = False,
+        logger_show_funcname: bool = False,
+        logger_show_tid: bool = False,
+    ) -> None:
         super().__init__()
         self._richlog = LockingRichLog(id="app_log")
-        self._logger_funcname = logger_funcname
-        self._log_level: int | str = logging.INFO
+        self._logger_show_level = logger_show_level
+        self._logger_show_time = logger_show_time
+        self._logger_show_name = logger_show_name
+        self._logger_show_callstack = logger_show_callstack
+        self._logger_show_funcname = logger_show_funcname
+        self._logger_show_tid = logger_show_tid
+        self._log_level: Sequence[LogLevelSpec] = (logging.INFO,)
         self._footer_label = Label(Text.from_markup("nonsense"), id="footer")
 
     def add_default_arguments(self, parser: ArgumentParser) -> None:
         """Adds arguments to @parser we need in every app"""
-        parser.add_argument(
-            "--log-level",
-            "-l",
-            type=str.upper,
-            choices=LOG_LEVELS,
-            default="INFO",
-        )
+        apply_common_logging_cli_args(parser)
 
     def compose(self) -> ComposeResult:
         """Set up the UI"""
@@ -84,14 +103,29 @@ class TuiBaseApp(App[None]):
     async def on_mount(self) -> None:
         """UI entry point"""
         logging.getLogger().handlers = [handler := RichLogHandler(self._richlog)]
-        optional_funcname = "│ [grey53]%(funcName)-32s[/] " if self._logger_funcname else ""
+
+        opt_time = "│ %(asctime)s " if self._logger_show_time else ""
+        opt_name = "│ [grey53]%(name)-16s[/] " if self._logger_show_name else ""
+        opt_funcname = "│ [grey53]%(funcName)-32s[/] " if self._logger_show_funcname else ""
+        opt_callstack = "│ [grey53]%(callstack)-32s[/] " if self._logger_show_callstack else ""
+        if self._logger_show_callstack:
+            handler.addFilter(callstack_filter)
+        opt_tid = "│ [grey53]%(posixTID)-8s[/] " if self._logger_show_tid else ""
+        if self._logger_show_tid:
+            handler.addFilter(thread_id_filter)
+        handler.addFilter(markup_escape_filter)
+        handler.addFilter(logger_name_filter)
         handler.setFormatter(
             logging.Formatter(
-                f"│ %(asctime)s {optional_funcname}│ [bold white]%(message)s[/]",
+                "│ %(asctime)s"
+                f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
+                "│ [bold white]%(message)s[/]",
                 datefmt="%Y-%m-%d %H:%M:%S",
             )
         )
-        self.set_log_level(self._log_level)
+
+        self.set_log_levels(*self._log_level)
+
         if hasattr(self, "initialize"):
             await self.initialize()
 
@@ -105,16 +139,9 @@ class TuiBaseApp(App[None]):
         if hasattr(self, "cleanup"):
             self.cleanup()
 
-    def set_log_level(self, level: int | str, *, others_level: int | str = logging.WARNING) -> None:
+    def set_log_levels(
+        self, *levels: LogLevelSpec, others_level: int | str = logging.WARNING
+    ) -> None:
         """Sets the overall log level for internal log console"""
-
-        # log level for everything
-        logging.getLogger().setLevel(logging.DEBUG if level == "ALL_DEBUG" else others_level)
-
-        # log level for provided @logger
-        used_level = getattr(logging, level.split("_")[-1]) if isinstance(level, str) else level
-
-        for handler in logging.getLogger().handlers:
-            handler.setLevel(used_level)
-
-        self._log_level = level
+        set_log_levels(*levels, others_level=others_level)
+        self._log_level = levels

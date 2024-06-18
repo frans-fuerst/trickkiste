@@ -5,6 +5,7 @@
 import logging
 import os
 import sys
+import threading
 import traceback
 from argparse import ArgumentParser
 from collections.abc import Iterable
@@ -14,6 +15,7 @@ from rich.logging import RichHandler
 from rich.markup import escape as markup_escape
 
 LOG_LEVELS = ("ALL_DEBUG", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL")
+LogLevelSpec = int | str | tuple[str | logging.Logger, int | str]
 
 
 def apply_common_logging_cli_args(parser: ArgumentParser) -> None:
@@ -46,59 +48,115 @@ def stack_str(depth: int = 0) -> str:
     return ">".join(reversed(list(stack_fns())))
 
 
-def setup_logging(logger: logging.Logger | str, level: str | int = "INFO") -> None:
+def markup_escape_filter(record: logging.LogRecord) -> bool:
+    """Escapes log record contents in order to avoid unintended formatting"""
+    record.args = record.args and tuple(
+        markup_escape(arg) if isinstance(arg, str) else arg for arg in record.args
+    )
+    record.msg = markup_escape(record.msg)
+    return True
+
+
+def thread_id_filter(record: logging.LogRecord) -> bool:
+    """Inject thread_id in log records"""
+    record.posixTID = threading.get_native_id()
+    return True
+
+
+def callstack_filter(record: logging.LogRecord) -> bool:
+    """Inject short function call stack in log records"""
+    record.callstack = stack_str(5)
+    return True
+
+
+def logger_name_filter(record: logging.LogRecord) -> bool:
+    """Inject thread_id to log records"""
+    record.name = record.name[11:] if record.name.startswith("trickkiste.") else record.name
+    return True
+
+
+def setup_logging(  # pylint: disable=too-many-arguments
+    logger: logging.Logger | str,
+    level: str | int = "INFO",
+    show_level: bool = True,
+    show_time: bool = True,
+    show_name: bool = True,
+    show_callstack: bool = False,
+    show_funcname: bool = True,
+    show_tid: bool = False,
+) -> None:
     """Make logging fun"""
-
-    class CustomLogger(  # pylint: disable=unused-variable
-        logging.getLoggerClass()  # type: ignore[misc]
-    ):
-        """Injects the 'stack' element"""
-
-        def makeRecord(self, *args: object, **kwargs: object) -> logging.LogRecord:
-            """Adds 'stack' element to given record"""
-            kwargs.setdefault("extra", {})["stack"] = stack_str(5)  # type: ignore[index]
-            return super().makeRecord(*args, **kwargs)  # type: ignore[no-any-return]
-
-    # currently this introduces more problems then benefits
-    # logging.setLoggerClass(CustomLogger)
-
-    # log level for everything
-    root_log_level = logging.DEBUG if level == "ALL_DEBUG" else logging.WARNING
-
-    # log level for provided @logger
-    used_level = getattr(logging, level.split("_")[-1]) if isinstance(level, str) else level
-
     if not logging.getLogger().hasHandlers():
-        logging.getLogger().setLevel(root_log_level)
-        shandler = RichHandler(
+        handler = RichHandler(
+            show_level=show_level,
             show_time=False,
+            omit_repeated_times=True,
             show_path=False,
             markup=True,
             console=Console(
                 stderr=True, color_system="standard" if os.environ.get("FORCE_COLOR") else "auto"
             ),
         )
-        logging.getLogger().addHandler(shandler)
-        shandler.setLevel(min(used_level, root_log_level))
-        shandler.setFormatter(logging.Formatter("│ [grey]%(name)-15s[/] │ [bold]%(message)s[/]"))
+        logging.getLogger().addHandler(handler)
 
-        # logging.basicConfig(
-        #   format="%(name)s %(levelname)s: %(message)s",
-        #   datefmt="%Y-%m-%d %H:%M:%S",
-        #   level=logging.DEBUG if level == "ALL_DEBUG" else logging.WARNING,
-        # )
+        opt_time = "│ %(asctime)s " if show_time else ""
+        opt_name = "│ [grey53]%(name)-16s[/] " if show_name else ""
+        opt_funcname = "│ [grey53]%(funcName)-32s[/] " if show_funcname else ""
+        opt_callstack = "│ [grey53]%(callstack)-32s[/] " if show_callstack else ""
+        if show_callstack:
+            handler.addFilter(callstack_filter)
+        opt_tid = "│ [grey53]%(posixTID)-8s[/] " if show_tid else ""
+        if show_tid:
+            handler.addFilter(thread_id_filter)
+        handler.addFilter(markup_escape_filter)
+        handler.addFilter(logger_name_filter)
 
-        def markup_escaper(record: logging.LogRecord) -> bool:
-            record.args = record.args and tuple(
-                markup_escape(arg) if isinstance(arg, str) else arg for arg in record.args
+        handler.setFormatter(
+            logging.Formatter(
+                f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
+                "│ [bold white]%(message)s[/]",
+                datefmt="%Y-%m-%d %H:%M:%S",
             )
-            record.msg = markup_escape(record.msg)
-            return True
+        )
 
-        shandler.addFilter(markup_escaper)
+    set_log_levels((logger, level))
 
     # for lev in LOG_LEVELS:
     #    logging.addLevelName(getattr(logging, lev), f"{lev[0] * 2}")
 
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
-    (logging.getLogger(logger) if isinstance(logger, str) else logger).setLevel(used_level)
+
+
+def set_log_levels(*levels: LogLevelSpec, others_level: int | str = logging.WARNING) -> None:
+    """Sets the overall log level for internal log console"""
+
+    def level_of(level: str | int) -> int:
+        return int(logging.getLevelName(level.split("_")[-1])) if isinstance(level, str) else level
+
+    named_levels: dict[str | None, int] = {
+        **{
+            None: logging.DEBUG if "ALL_DEBUG" in levels else level_of(others_level),
+            "trickkiste": logging.INFO,
+        },
+        **dict(
+            (
+                ("trickkiste", level_of(level_spec))
+                if isinstance(level_spec, (int, str))
+                else (
+                    (
+                        level_spec[0].name
+                        if isinstance(level_spec[0], logging.Logger)
+                        else level_spec[0]
+                    ),
+                    level_of(level_spec[1]),
+                )
+            )
+            for level_spec in levels
+        ),
+    }
+
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(min(named_levels.values()))
+
+    for name, level in named_levels.items():
+        logging.getLogger(name).setLevel(level)
