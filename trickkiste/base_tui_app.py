@@ -134,8 +134,10 @@ class TuiBaseApp(App[None]):
 
         self.set_log_levels(*self._log_level)
 
-        if hasattr(self, "initialize"):
-            await self.initialize()
+        await self.initialize()
+
+    async def initialize(self) -> None:
+        """Not implemented"""
 
     def update_status_bar(self, text: str) -> None:
         """Convenience wrapper - should go to TUIBaseApp"""
@@ -144,8 +146,10 @@ class TuiBaseApp(App[None]):
     def execute(self) -> None:
         """Wrapper for async run and optional cleanup if provided"""
         asyncio.run(self.run_async())
-        if hasattr(self, "cleanup"):
-            self.cleanup()
+        self.cleanup()
+
+    def cleanup(self) -> None:
+        """Not implemented"""
 
     def set_log_levels(
         self, *levels: LogLevelSpec, others_level: int | str = logging.WARNING
