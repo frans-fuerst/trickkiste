@@ -2,7 +2,9 @@
 
 """A textual base app with common features like a logging window"""
 # pylint: disable=duplicate-code
+# pylint: disable=too-many-locals
 # pylint: disable=too-many-arguments
+# pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
 
 import asyncio
@@ -11,12 +13,18 @@ from argparse import ArgumentParser
 from collections.abc import Sequence
 from pathlib import Path
 
+from rich.color import Color
+from rich.console import Console, ConsoleOptions, RenderResult
 from rich.logging import RichHandler
 from rich.markup import escape as markup_escape
+from rich.segment import Segment
+from rich.style import Style
 from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
 from textual.message import Message
+from textual.renderables._blend_colors import blend_colors
+from textual.renderables.sparkline import Sparkline as SparklineRenderable
 from textual.scrollbar import ScrollTo
 from textual.widgets import Label, RichLog
 
@@ -145,3 +153,87 @@ class TuiBaseApp(App[None]):
         """Sets the overall log level for internal log console"""
         set_log_levels(*levels, others_level=others_level)
         self._log_level = levels
+
+
+class HeatBar(SparklineRenderable[float]):
+    """SparklineRenderable with additional features"""
+
+    BARS = "▁▂▃▄▅▆▇█"
+    BARS_INVERTED = " 🮂🮃🮄🮅🮆█"
+
+    def __init__(
+        self,
+        *,
+        width: int | None = 10,
+        min_color: int | str | Color = Color.from_rgb(0, 255, 0),
+        max_color: int | str | Color = Color.from_rgb(255, 0, 0),
+        min_bar_value: float | None = None,
+        max_bar_value: float | None = None,
+        min_color_value: float | None = None,
+        max_color_value: float | None = None,
+        inverted: bool = False,
+    ) -> None:
+        super().__init__(
+            data=[],
+            width=width,
+            min_color=(
+                Color.from_triplet(Color.from_ansi(min_color).get_truecolor())
+                if isinstance(min_color, int)
+                else (
+                    Color.from_triplet(Color.parse(min_color).get_truecolor())
+                    if isinstance(min_color, str)
+                    else min_color
+                )
+            ),
+            max_color=(
+                Color.from_triplet(Color.from_ansi(max_color).get_truecolor())
+                if isinstance(max_color, int)
+                else (
+                    Color.from_triplet(Color.parse(max_color).get_truecolor())
+                    if isinstance(max_color, str)
+                    else max_color
+                )
+            ),
+        )
+        self.bars = self.BARS_INVERTED if inverted else self.BARS
+        self.inverted = inverted
+        self.min_bar_value = min_bar_value
+        self.max_bar_value = max_bar_value
+        self.min_color_value = min_color_value
+        self.max_color_value = max_color_value
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        width = self.width or options.max_width
+        len_data = len(self.data)
+        if len_data == 0:
+            yield Segment("▁" * width, self.min_color)
+            return
+        if len_data == 1:
+            yield Segment("█" * width, self.max_color)
+            return
+
+        minimum = min(self.data) if self.min_bar_value is None else self.min_bar_value
+        maximum = max(self.data) if self.max_bar_value is None else self.max_bar_value
+
+        extent = maximum - minimum or 1
+
+        buckets = tuple(self._buckets(list(self.data), num_buckets=width))
+
+        bucket_index = 0.0
+        bars_rendered = 0
+        step = len(buckets) / width
+        summary_function = self.summary_function
+        min_color, max_color = self.min_color.color, self.max_color.color
+        assert min_color is not None
+        assert max_color is not None
+        while bars_rendered < width:
+            partition = buckets[int(bucket_index)]
+            partition_summary = summary_function(partition)
+            height_ratio = (partition_summary - minimum) / extent
+            bar_index = int(height_ratio * (len(self.bars) - 1))
+            bar_color = blend_colors(min_color, max_color, height_ratio)
+            bars_rendered += 1
+            bucket_index += step
+            yield Segment(
+                self.bars[min(bar_index, len(self.bars) - 1)], Style.from_color(bar_color)
+            )
