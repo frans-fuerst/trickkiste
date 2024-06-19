@@ -10,7 +10,7 @@
 import asyncio
 import logging
 from argparse import ArgumentParser
-from collections.abc import Sequence
+from collections.abc import MutableSequence, Sequence
 from pathlib import Path
 
 from rich.color import Color
@@ -125,7 +125,6 @@ class TuiBaseApp(App[None]):
         handler.addFilter(logger_name_filter)
         handler.setFormatter(
             logging.Formatter(
-                "│ %(asctime)s"
                 f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
                 "│ [bold white]%(message)s[/]",
                 datefmt="%Y-%m-%d %H:%M:%S",
@@ -199,6 +198,7 @@ class HeatBar(SparklineRenderable[float]):
                 )
             ),
         )
+        self.data: MutableSequence[float] = []
         self.bars = self.BARS_INVERTED if inverted else self.BARS
         self.inverted = inverted
         self.min_bar_value = min_bar_value
