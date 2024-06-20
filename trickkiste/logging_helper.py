@@ -18,7 +18,7 @@ LOG_LEVELS = ("ALL_DEBUG", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL")
 LogLevelSpec = int | str | tuple[str | logging.Logger, int | str]
 
 
-def apply_common_logging_cli_args(parser: ArgumentParser) -> None:
+def apply_common_logging_cli_args(parser: ArgumentParser) -> ArgumentParser:
     """Decorates given @parser with arguments for logging"""
     parser.add_argument(
         "--log-level",
@@ -28,6 +28,7 @@ def apply_common_logging_cli_args(parser: ArgumentParser) -> None:
         type=str.upper,
         default="INFO",
     )
+    return parser
 
 
 def stack_str(depth: int = 0) -> str:

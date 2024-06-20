@@ -99,9 +99,10 @@ class TuiBaseApp(App[None]):
         self._log_level: Sequence[LogLevelSpec] = (logging.INFO,)
         self._footer_label = Label(Text.from_markup("nonsense"), id="footer")
 
-    def add_default_arguments(self, parser: ArgumentParser) -> None:
+    def add_default_arguments(self, parser: ArgumentParser) -> ArgumentParser:
         """Adds arguments to @parser we need in every app"""
         apply_common_logging_cli_args(parser)
+        return parser
 
     def compose(self) -> ComposeResult:
         """Set up the UI"""
