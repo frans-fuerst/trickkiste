@@ -15,7 +15,7 @@ from datetime import datetime
 from functools import partial, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
-from typing import ParamSpec, TypeVar
+from typing import NoReturn, ParamSpec, TypeVar
 
 from dateutil import tz
 
@@ -23,6 +23,11 @@ from dateutil import tz
 def log() -> logging.Logger:
     """Returns the logger instance to use here"""
     return logging.getLogger("trickkiste.misc")
+
+
+def throw(exception: BaseException) -> NoReturn:
+    """Function for throwing exceptions in order to become functional"""
+    raise exception
 
 
 def md5from(filepath: Path) -> None | str:
