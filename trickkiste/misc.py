@@ -8,7 +8,14 @@ import logging
 import os
 import re
 import shlex
-from collections.abc import Awaitable, Callable, Iterator, Mapping
+from collections.abc import (
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Iterable,
+    Iterator,
+    Mapping,
+)
 from concurrent.futures import Executor
 from contextlib import contextmanager, suppress
 from datetime import datetime
@@ -244,3 +251,13 @@ def asyncify(func: Callable[P, R]) -> Callable[P, Awaitable[R]]:
         )
 
     return run  # type: ignore[return-value]  # (no clue yet how to solve this)
+
+
+T = TypeVar("T")
+
+
+async def async_chain(iterator: AsyncIterable[Iterable[T]]) -> AsyncIterable[T]:
+    """Turns a nested async iterable into a flattened iterable"""
+    async for elems in iterator:
+        for elem in elems:
+            yield elem
