@@ -92,6 +92,7 @@ class TuiBaseApp(App[None]):
         super().__init__()
         self._richlog = LockingRichLog(id="app_log")
         self._richlog.max_lines = logger_max_lines or None
+        self._richlog.can_focus = False
         self._logger_show_level = logger_show_level
         self._logger_show_time = logger_show_time
         self._logger_show_name = logger_show_name
