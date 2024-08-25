@@ -87,9 +87,11 @@ class TuiBaseApp(App[None]):
         logger_show_callstack: bool = False,
         logger_show_funcname: bool = False,
         logger_show_tid: bool = False,
+        logger_max_lines: int | bool = 10_000,
     ) -> None:
         super().__init__()
         self._richlog = LockingRichLog(id="app_log")
+        self._richlog.max_lines = logger_max_lines or None
         self._logger_show_level = logger_show_level
         self._logger_show_time = logger_show_time
         self._logger_show_name = logger_show_name
