@@ -266,3 +266,16 @@ async def async_chain(iterator: AsyncIterable[Iterable[ChainT]]) -> AsyncIterabl
     async for elems in iterator:
         for elem in elems:
             yield elem
+
+
+FilterT = TypeVar("FilterT")
+
+
+async def async_filter(
+    filter_fn: Callable[[FilterT], bool], iterator: AsyncIterable[Iterable[FilterT]]
+) -> AsyncIterable[Iterable[FilterT]]:
+    """Applies filter() to nested iterables"""
+    async for elems in iterator:
+        # don't return empty lists
+        if result := list(filter(filter_fn, elems)):
+            yield result
