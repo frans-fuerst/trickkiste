@@ -232,20 +232,20 @@ def process_output(cmd: str) -> str:
     return check_output(shlex.split(cmd), stderr=DEVNULL, text=True)
 
 
-R = TypeVar("R")
-P = ParamSpec("P")
+AsyncifyT = TypeVar("AsyncifyT")
+AsyncifyP = ParamSpec("AsyncifyP")
 
 
-def asyncify(func: Callable[P, R]) -> Callable[P, Awaitable[R]]:
+def asyncify(func: Callable[AsyncifyP, AsyncifyT]) -> Callable[AsyncifyP, Awaitable[AsyncifyT]]:
     """Turns a synchronous function into an asynchronous one"""
 
     @wraps(func)
     async def run(
-        *args: P.args,
+        *args: AsyncifyP.args,
         loop: None | asyncio.AbstractEventLoop = None,
         executor: None | Executor = None,
-        **kwargs: P.kwargs,
-    ) -> R:
+        **kwargs: AsyncifyP.kwargs,
+    ) -> AsyncifyT:
         return await (loop or asyncio.get_event_loop()).run_in_executor(
             executor, partial(func, *args, **kwargs)
         )
@@ -253,10 +253,10 @@ def asyncify(func: Callable[P, R]) -> Callable[P, Awaitable[R]]:
     return run  # type: ignore[return-value]  # (no clue yet how to solve this)
 
 
-T = TypeVar("T")
+ChainT = TypeVar("ChainT")
 
 
-async def async_chain(iterator: AsyncIterable[Iterable[T]]) -> AsyncIterable[T]:
+async def async_chain(iterator: AsyncIterable[Iterable[ChainT]]) -> AsyncIterable[ChainT]:
     """Turns a nested async iterable into a flattened iterable"""
     async for elems in iterator:
         for elem in elems:
