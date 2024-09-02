@@ -19,7 +19,7 @@ from collections.abc import (
 from concurrent.futures import Executor
 from contextlib import contextmanager, suppress
 from datetime import datetime
-from functools import partial, wraps
+from functools import partial, reduce, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
 from typing import NoReturn, ParamSpec, TypeVar
@@ -201,6 +201,11 @@ def smart_split(string: str, delimiter: str = ",") -> Iterator[str]:
         yield string[start:pos]
         start = pos + 1
     yield string[start:]
+
+
+def multi_replace(string: str, *substitutions: tuple[str, str]) -> str:
+    """Returns @string with given list of @substituions applied using str.replace"""
+    return reduce(lambda s, r: s.replace(*r), substitutions, string)
 
 
 def split_params(string: str) -> Mapping[str, str]:
