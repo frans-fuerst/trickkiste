@@ -37,6 +37,7 @@ def main() -> None:
         show_callstack=40,
         show_funcname=25,
         show_tid=7,
+        show_linenumber=True,
     )
 
     set_log_levels("DEBUG")

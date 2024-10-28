@@ -6,6 +6,7 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=too-few-public-methods
 # pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-positional-arguments
 
 import asyncio
 import logging
@@ -86,6 +87,7 @@ class TuiBaseApp(App[None]):
         logger_show_funcname: bool | int = False,
         logger_show_tid: bool | int = False,
         logger_max_lines: int | bool = 10_000,
+        logger_show_linenumber: bool = False,
     ) -> None:
         super().__init__()
         self._richlog = LockingRichLog(id="app_log")
@@ -97,6 +99,7 @@ class TuiBaseApp(App[None]):
         self._logger_show_callstack = logger_show_callstack
         self._logger_show_funcname = logger_show_funcname
         self._logger_show_tid = logger_show_tid
+        self._logger_show_linenumber = logger_show_linenumber
         self._log_level: Sequence[LogLevelSpec] = (logging.INFO,)
         self._footer_label = Label(Text.from_markup("nonsense"), id="footer")
 
@@ -120,6 +123,7 @@ class TuiBaseApp(App[None]):
             self._logger_show_callstack,
             self._logger_show_funcname,
             self._logger_show_tid,
+            self._logger_show_linenumber,
         )
 
         self.set_log_levels(*self._log_level)

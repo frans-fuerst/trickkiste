@@ -3,6 +3,7 @@
 """Common stuff shared among modules"""
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-arguments
+# pylint: disable=too-many-positional-arguments
 
 import logging
 import os
@@ -78,6 +79,15 @@ def logger_name_filter(record: logging.LogRecord) -> bool:
     return True
 
 
+def logger_funcname_filter(record: logging.LogRecord, width: int, with_line_number: bool) -> bool:
+    """Inject augmented funcName with line number and link to source"""
+    text = f"{record.funcName}():{record.lineno}" if with_line_number else f"{record.funcName}()"
+    record.funcName = (
+        f"[link=file://{record.pathname}#{record.lineno}]{text}[/]{' ' * (width - len(text))}"
+    )
+    return True
+
+
 def setup_logging(  # pylint: disable=too-many-arguments
     logger: logging.Logger | str,
     *,
@@ -88,6 +98,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
     show_callstack: bool | int = False,
     show_funcname: bool | int = True,
     show_tid: bool | int = False,
+    show_linenumber: bool = False,
 ) -> None:
     """Make logging fun"""
     if not logging.getLogger().hasHandlers():
@@ -108,6 +119,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
             show_callstack,
             show_funcname,
             show_tid,
+            show_linenumber,
         )
 
     set_log_levels((logger, level))
@@ -122,6 +134,7 @@ def setup_logging_handler(
     show_callstack: bool | int,
     show_funcname: bool | int,
     show_tid: bool | int,
+    show_linenumber: bool,
 ) -> None:
     """Handler setup, common among console and TUI"""
 
@@ -145,7 +158,9 @@ def setup_logging_handler(
 
     if show_callstack:
         handler.addFilter(callstack_filter)
-    opt_funcname = f"│ [grey53]%(funcName)-{width_funcname}s[/] " if width_funcname else ""
+    opt_funcname = "│ [grey53]%(funcName)s[/] " if width_funcname else ""
+    if show_funcname:
+        handler.addFilter(lambda r: logger_funcname_filter(r, width_funcname, show_linenumber))
     opt_tid = "│ [grey53]%(posixTID)-8s[/] " if show_tid else ""
     opt_tid = f"│ [grey53]%(posixTID)-{width_tid}s[/] " if width_tid else ""
     if show_tid:
