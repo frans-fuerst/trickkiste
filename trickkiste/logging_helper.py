@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 """Common stuff shared among modules"""
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-arguments
 
 import logging
 import os
@@ -78,54 +80,85 @@ def logger_name_filter(record: logging.LogRecord) -> bool:
 
 def setup_logging(  # pylint: disable=too-many-arguments
     logger: logging.Logger | str,
+    *,
     level: str | int = "INFO",
     show_level: bool = True,
     show_time: bool = True,
-    show_name: bool = True,
-    show_callstack: bool = False,
-    show_funcname: bool = True,
-    show_tid: bool = False,
+    show_name: bool | int = True,
+    show_callstack: bool | int = False,
+    show_funcname: bool | int = True,
+    show_tid: bool | int = False,
 ) -> None:
     """Make logging fun"""
     if not logging.getLogger().hasHandlers():
-        handler = RichHandler(
-            show_level=show_level,
-            show_time=False,
-            omit_repeated_times=True,
-            show_path=False,
-            markup=True,
-            console=Console(
-                stderr=True, color_system="standard" if os.environ.get("FORCE_COLOR") else "auto"
+        setup_logging_handler(
+            RichHandler(
+                show_level=show_level,
+                show_time=False,
+                omit_repeated_times=True,
+                show_path=False,
+                markup=True,
+                console=Console(
+                    stderr=True,
+                    color_system="standard" if os.environ.get("FORCE_COLOR") else "auto",
+                ),
             ),
-        )
-        logging.getLogger().addHandler(handler)
-
-        opt_time = "│ %(asctime)s " if show_time else ""
-        opt_name = "│ [grey53]%(name)-16s[/] " if show_name else ""
-        opt_funcname = "│ [grey53]%(funcName)-32s[/] " if show_funcname else ""
-        opt_callstack = "│ [grey53]%(callstack)-32s[/] " if show_callstack else ""
-        if show_callstack:
-            handler.addFilter(callstack_filter)
-        opt_tid = "│ [grey53]%(posixTID)-8s[/] " if show_tid else ""
-        if show_tid:
-            handler.addFilter(thread_id_filter)
-        handler.addFilter(markup_escape_filter)
-        handler.addFilter(logger_name_filter)
-
-        handler.setFormatter(
-            logging.Formatter(
-                f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
-                "│ [bold white]%(message)s[/]",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
+            show_time,
+            show_name,
+            show_callstack,
+            show_funcname,
+            show_tid,
         )
 
     set_log_levels((logger, level))
 
-    # for lev in LOG_LEVELS:
-    #    logging.addLevelName(getattr(logging, lev), f"{lev[0] * 2}")
-
     logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
+
+
+def setup_logging_handler(
+    handler: logging.Handler,
+    show_time: bool,
+    show_name: bool | int,
+    show_callstack: bool | int,
+    show_funcname: bool | int,
+    show_tid: bool | int,
+) -> None:
+    """Handler setup, common among console and TUI"""
+
+    def bool_to_int(val: int | bool, default: int) -> int:
+        if not val:
+            return 0
+        if val is True:
+            return default
+        return val
+
+    width_name = bool_to_int(show_name, 16)
+    width_callstack = bool_to_int(show_callstack, 32)
+    width_funcname = bool_to_int(show_funcname, 20)
+    width_tid = bool_to_int(show_tid, 8)
+
+    logging.getLogger().addHandler(handler)
+
+    opt_time = "│ %(asctime)s " if show_time else ""
+    opt_name = f"│ [grey53]%(name)-{width_name}s[/] " if width_name else ""
+    opt_callstack = f"│ [grey53]%(callstack)-{width_callstack}s[/] " if width_callstack else ""
+
+    if show_callstack:
+        handler.addFilter(callstack_filter)
+    opt_funcname = f"│ [grey53]%(funcName)-{width_funcname}s[/] " if width_funcname else ""
+    opt_tid = "│ [grey53]%(posixTID)-8s[/] " if show_tid else ""
+    opt_tid = f"│ [grey53]%(posixTID)-{width_tid}s[/] " if width_tid else ""
+    if show_tid:
+        handler.addFilter(thread_id_filter)
+    handler.addFilter(markup_escape_filter)
+    handler.addFilter(logger_name_filter)
+    handler.setFormatter(
+        logging.Formatter(
+            f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
+            "│ [bold white]%(message)s[/]",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
 
 
 def set_log_levels(*levels: LogLevelSpec, others_level: int | str = logging.WARNING) -> None:

@@ -23,17 +23,26 @@ def main() -> None:
     apply_common_logging_cli_args(parser)
     args = parser.parse_args()
 
-    setup_logging(log(), level=args.log_level)
+    setup_logging(
+        log(),
+        level=args.log_level,
+        # show_level = True,
+        # show_time = True,
+        # show_name = True,
+        # show_callstack = False,
+        # show_funcname = True,
+        # show_tid = False,
+    )
 
     set_log_levels("DEBUG")
     set_log_levels(logging.DEBUG)
     set_log_levels((log(), "DEBUG"))
     set_log_levels(("trickkiste", "INFO"), (log(), "DEBUG"))
 
-    logging.getLogger().debug("foo")
-    logging.getLogger().info("foo")
-    logging.getLogger().warning("foo")
-    logging.getLogger().error("foo")
+    logging.getLogger().debug("getLogger (debug)")
+    logging.getLogger().info("getLogger (info)")
+    logging.getLogger().warning("getLogger (warning)")
+    logging.getLogger().error("getLogger (error)")
 
     logging.getLogger("trickkiste").debug("debug")
     logging.getLogger("trickkiste").info("info")

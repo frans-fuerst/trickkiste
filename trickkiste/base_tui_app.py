@@ -31,11 +31,8 @@ from textual.widgets import Label, RichLog
 from .logging_helper import (
     LogLevelSpec,
     apply_common_logging_cli_args,
-    callstack_filter,
-    logger_name_filter,
-    markup_escape_filter,
     set_log_levels,
-    thread_id_filter,
+    setup_logging_handler,
 )
 
 
@@ -81,6 +78,7 @@ class TuiBaseApp(App[None]):
 
     def __init__(
         self,
+        *,
         logger_show_level: bool = True,
         logger_show_time: bool = True,
         logger_show_name: bool | int = True,
@@ -89,23 +87,16 @@ class TuiBaseApp(App[None]):
         logger_show_tid: bool | int = False,
         logger_max_lines: int | bool = 10_000,
     ) -> None:
-        def bool_to_int(val: int | bool, default: int) -> int:
-            if not val:
-                return 0
-            if val is True:
-                return default
-            return val
-
         super().__init__()
         self._richlog = LockingRichLog(id="app_log")
         self._richlog.max_lines = logger_max_lines or None
         self._richlog.can_focus = False
         self._logger_show_level = logger_show_level
         self._logger_show_time = logger_show_time
-        self._logger_width_name = bool_to_int(logger_show_name, 16)
-        self._logger_width_callstack = bool_to_int(logger_show_callstack, 32)
-        self._logger_width_funcname = bool_to_int(logger_show_funcname, 20)
-        self._logger_width_tid = bool_to_int(logger_show_tid, 8)
+        self._logger_show_name = logger_show_name
+        self._logger_show_callstack = logger_show_callstack
+        self._logger_show_funcname = logger_show_funcname
+        self._logger_show_tid = logger_show_tid
         self._log_level: Sequence[LogLevelSpec] = (logging.INFO,)
         self._footer_label = Label(Text.from_markup("nonsense"), id="footer")
 
@@ -122,36 +113,13 @@ class TuiBaseApp(App[None]):
     async def on_mount(self) -> None:
         """UI entry point"""
         logging.getLogger().handlers = [handler := RichLogHandler(self._richlog)]
-
-        opt_time = "│ %(asctime)s " if self._logger_show_time else ""
-        opt_name = (
-            f"│ [grey53]%(name)-{self._logger_width_name}s[/] " if self._logger_width_name else ""
-        )
-        opt_funcname = (
-            f"│ [grey53]%(funcName)-{self._logger_width_funcname}s[/] "
-            if self._logger_width_funcname
-            else ""
-        )
-        opt_callstack = (
-            f"│ [grey53]%(callstack)-{self._logger_width_callstack}s[/] "
-            if self._logger_width_callstack
-            else ""
-        )
-        if self._logger_width_callstack:
-            handler.addFilter(callstack_filter)
-        opt_tid = (
-            f"│ [grey53]%(posixTID)-{self._logger_width_tid}s[/] " if self._logger_width_tid else ""
-        )
-        if self._logger_width_tid:
-            handler.addFilter(thread_id_filter)
-        handler.addFilter(markup_escape_filter)
-        handler.addFilter(logger_name_filter)
-        handler.setFormatter(
-            logging.Formatter(
-                f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
-                "│ [bold white]%(message)s[/]",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
+        setup_logging_handler(
+            handler,
+            self._logger_show_time,
+            self._logger_show_name,
+            self._logger_show_callstack,
+            self._logger_show_funcname,
+            self._logger_show_tid,
         )
 
         self.set_log_levels(*self._log_level)
