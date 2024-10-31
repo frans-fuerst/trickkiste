@@ -94,6 +94,7 @@ class TuiBaseApp(App[None]):
         logger_show_tid: bool | int = False,
         logger_max_lines: int | bool = 10_000,
         logger_show_linenumber: bool = False,
+        logger_file_path: Path | None = None,
     ) -> None:
         super().__init__()
         self._richlog = LockingRichLog(id="app_log")
@@ -108,6 +109,7 @@ class TuiBaseApp(App[None]):
         self._logger_show_linenumber = logger_show_linenumber
         self._log_level: Sequence[LogLevelSpec] = (logging.INFO,)
         self._footer_label = Label(Text.from_markup("nonsense"), id="footer")
+        self._logger_file_path = logger_file_path
 
     def add_default_arguments(self, parser: ArgumentParser) -> ArgumentParser:
         """Adds arguments to @parser we need in every app"""
@@ -131,6 +133,7 @@ class TuiBaseApp(App[None]):
             self._logger_show_funcname,
             self._logger_show_tid,
             self._logger_show_linenumber,
+            self._logger_file_path,
         )
 
         self.set_log_levels(*self._log_level)

@@ -6,12 +6,14 @@
 # pylint: disable=too-many-positional-arguments
 
 import logging
+import logging.handlers
 import os
 import sys
 import threading
 import traceback
 from argparse import ArgumentParser
 from collections.abc import Iterable
+from pathlib import Path
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -38,6 +40,11 @@ def apply_common_logging_cli_args(parser: ArgumentParser) -> ArgumentParser:
         help="Sets the logging level - ALL_DEBUG sets all other loggers to DEBUG, too",
         type=str.upper,
         default="INFO",
+    )
+    parser.add_argument(
+        "--log-file",
+        help="Write log output to given file",
+        type=Path,
     )
     return parser
 
@@ -117,6 +124,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
     show_funcname: bool | int = True,
     show_tid: bool | int = False,
     show_linenumber: bool = False,
+    file_path: Path | None = None,
 ) -> None:
     """Make logging fun"""
     if not logging.getLogger().hasHandlers():
@@ -139,6 +147,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
             show_funcname,
             show_tid,
             show_linenumber,
+            file_path,
         )
 
     set_log_levels((logger, level))
@@ -155,6 +164,7 @@ def setup_logging_handler(
     show_funcname: bool | int,
     show_tid: bool | int,
     show_linenumber: bool,
+    file_path: Path | None = None,
 ) -> None:
     """Handler setup, common among console and TUI"""
 
@@ -200,6 +210,15 @@ def setup_logging_handler(
             datefmt="%Y-%m-%d %H:%M:%S",
         )
     )
+    if file_path:
+        logging.getLogger().addHandler(
+            filehandler := logging.handlers.RotatingFileHandler(
+                file_path,
+                maxBytes=1_000_000,
+                backupCount=1,
+            )
+        )
+        filehandler.setFormatter(logging.Formatter("%(asctime)-15s::%(levelname)s::%(message)s"))
 
 
 def set_log_levels(*levels: LogLevelSpec, others_level: int | str = logging.WARNING) -> None:

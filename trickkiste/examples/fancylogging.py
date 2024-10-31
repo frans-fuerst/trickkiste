@@ -38,6 +38,7 @@ def main() -> None:
         show_funcname=25,
         show_tid=7,
         show_linenumber=True,
+        file_path=args.log_file,
     )
 
     set_log_levels("DEBUG")
