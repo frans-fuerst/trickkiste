@@ -46,7 +46,13 @@ class RichLogHandler(RichHandler):
     """Redirects rich.RichHanlder capabilities to a textual.RichLog"""
 
     def __init__(self, widget: RichLog, level: int = logging.INFO):
-        super().__init__(show_path=False, markup=True, show_time=False, level=level)
+        super().__init__(
+            show_level=False,
+            show_path=False,
+            markup=True,
+            show_time=False,
+            level=level,
+        )
         self.widget: RichLog = widget
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -118,6 +124,7 @@ class TuiBaseApp(App[None]):
         logging.getLogger().handlers = [handler := RichLogHandler(self._richlog)]
         setup_logging_handler(
             handler,
+            self._logger_show_level,
             self._logger_show_time,
             self._logger_show_name,
             self._logger_show_callstack,

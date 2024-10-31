@@ -18,6 +18,14 @@ from rich.logging import RichHandler
 from rich.markup import escape as markup_escape
 
 LOG_LEVELS = ("ALL_DEBUG", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL")
+SHORT_COLOR_LEVEL_NAMES = {
+    "NOTSET": "[dim]NN[/]",
+    "DEBUG": "[green]DD[/]",
+    "INFO": "[blue]II[/]",
+    "WARNING": "[yellow]WW[/]",
+    "ERROR": "[red bold]EE[/]",
+    "CRITICAL": "[red bold reverse]CC[/]",
+}
 LogLevelSpec = int | str | tuple[str | logging.Logger, int | str]
 
 
@@ -88,6 +96,16 @@ def logger_funcname_filter(record: logging.LogRecord, width: int, with_line_numb
     return True
 
 
+def logger_levelname_filter(record: logging.LogRecord) -> bool:
+    """Shorten the level name (but keep the coloring)"""
+    # we cannot use levelname because it get's handled by the RichHandler
+    # another approach would be to register styles for
+    # logging.level.<SHORTNAME> and set
+    # record.levelname = <SHORTNAME>
+    record.shortlevelname = SHORT_COLOR_LEVEL_NAMES[record.levelname]
+    return True
+
+
 def setup_logging(  # pylint: disable=too-many-arguments
     logger: logging.Logger | str,
     *,
@@ -104,7 +122,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
     if not logging.getLogger().hasHandlers():
         setup_logging_handler(
             RichHandler(
-                show_level=show_level,
+                show_level=False,
                 show_time=False,
                 omit_repeated_times=True,
                 show_path=False,
@@ -114,6 +132,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
                     color_system="standard" if os.environ.get("FORCE_COLOR") else "auto",
                 ),
             ),
+            show_level,
             show_time,
             show_name,
             show_callstack,
@@ -129,6 +148,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
 
 def setup_logging_handler(
     handler: logging.Handler,
+    show_level: bool,
     show_time: bool,
     show_name: bool | int,
     show_callstack: bool | int,
@@ -152,25 +172,31 @@ def setup_logging_handler(
 
     logging.getLogger().addHandler(handler)
 
-    opt_time = "│ %(asctime)s " if show_time else ""
-    opt_name = f"│ [grey53]%(name)-{width_name}s[/] " if width_name else ""
-    opt_callstack = f"│ [grey53]%(callstack)-{width_callstack}s[/] " if width_callstack else ""
-
     if show_callstack:
         handler.addFilter(callstack_filter)
-    opt_funcname = "│ [grey53]%(funcName)s[/] " if width_funcname else ""
     if show_funcname:
         handler.addFilter(lambda r: logger_funcname_filter(r, width_funcname, show_linenumber))
-    opt_tid = "│ [grey53]%(posixTID)-8s[/] " if show_tid else ""
-    opt_tid = f"│ [grey53]%(posixTID)-{width_tid}s[/] " if width_tid else ""
     if show_tid:
         handler.addFilter(thread_id_filter)
     handler.addFilter(markup_escape_filter)
     handler.addFilter(logger_name_filter)
+    handler.addFilter(logger_levelname_filter)
+
     handler.setFormatter(
         logging.Formatter(
-            f"{opt_time}{opt_tid}{opt_name}{opt_funcname}{opt_callstack}"
-            "│ [bold white]%(message)s[/]",
+            " │ ".join(
+                str(elem)
+                for elem in (
+                    show_level and "%(shortlevelname)s",
+                    show_time and "%(asctime)s",
+                    width_tid and f"[grey53]%(posixTID)-{width_tid}s[/]",
+                    width_name and f"[grey53]%(name)-{width_name}s[/]",
+                    width_funcname and "[grey53]%(funcName)s[/]",
+                    width_callstack and f"[grey53]%(callstack)-{width_callstack}s[/]",
+                    "[bold white]%(message)s[/]",
+                )
+                if elem
+            ),
             datefmt="%Y-%m-%d %H:%M:%S",
         )
     )
