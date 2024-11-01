@@ -17,6 +17,11 @@ def log() -> logging.Logger:
     return logging.getLogger("trickkiste.fancylogging")
 
 
+def long_function_name() -> None:
+    """Just a function with a longer name"""
+    log().info("info from function")
+
+
 def main() -> None:
     """Runs this"""
     parser = ArgumentParser(__doc__)
@@ -26,12 +31,12 @@ def main() -> None:
     setup_logging(
         log(),
         level=args.log_level,
-        # show_level = True,
-        # show_time = True,
-        # show_name = True,
-        # show_callstack = False,
-        # show_funcname = True,
-        # show_tid = False,
+        # show_level = False,
+        # show_time = False,
+        show_name=14,
+        show_callstack=40,
+        show_funcname=25,
+        show_tid=7,
     )
 
     set_log_levels("DEBUG")
@@ -58,6 +63,8 @@ def main() -> None:
     logging.getLogger("other.module").info("only shown with level=ALL_DEBUG")
     logging.getLogger("other.module").warning("this is visible")
     logging.getLogger("other.module").error("this is also visible")
+
+    long_function_name()
 
 
 if __name__ == "__main__":
