@@ -175,6 +175,7 @@ class HeatBar(SparklineRenderable[float]):
         width: int | None = 10,
         min_color: int | str | Color = Color.from_rgb(0, 255, 0),
         max_color: int | str | Color = Color.from_rgb(255, 0, 0),
+        bg_color: int | str | Color | None = None,
         min_bar_value: float | None = None,
         max_bar_value: float | None = None,
         min_color_value: float | None = None,
@@ -203,6 +204,15 @@ class HeatBar(SparklineRenderable[float]):
                 )
             ),
         )
+        self.bg_color = (
+            Color.from_triplet(Color.from_ansi(bg_color).get_truecolor())
+            if isinstance(bg_color, int)
+            else (
+                Color.from_triplet(Color.parse(bg_color).get_truecolor())
+                if isinstance(bg_color, str)
+                else bg_color
+            )
+        )
         self.data: MutableSequence[float] = []
         self.bars = self.BARS_INVERTED if inverted else self.BARS
         self.inverted = inverted
@@ -221,10 +231,15 @@ class HeatBar(SparklineRenderable[float]):
             yield Segment("█" * width, self.max_color)
             return
 
-        minimum = min(self.data) if self.min_bar_value is None else self.min_bar_value
-        maximum = max(self.data) if self.max_bar_value is None else self.max_bar_value
+        min_value = min(self.data)
+        max_value = max(self.data)
+        min_bar_value = min_value if self.min_bar_value is None else self.min_bar_value
+        max_bar_value = max_value if self.max_bar_value is None else self.max_bar_value
+        min_color_value = min_value if self.min_color_value is None else self.min_color_value
+        max_color_value = max_value if self.max_color_value is None else self.max_color_value
 
-        extent = maximum - minimum or 1
+        bar_amplitude = max_bar_value - min_bar_value or 1
+        color_amplitude = max_color_value - min_color_value or 1
 
         buckets = tuple(self._buckets(list(self.data), num_buckets=width))
 
@@ -232,17 +247,21 @@ class HeatBar(SparklineRenderable[float]):
         bars_rendered = 0
         step = len(buckets) / width
         summary_function = self.summary_function
-        min_color, max_color = self.min_color.color, self.max_color.color
-        assert min_color is not None
-        assert max_color is not None
+        assert self.min_color.color
+        assert self.max_color.color
         while bars_rendered < width:
-            partition = buckets[int(bucket_index)]
-            partition_summary = summary_function(partition)
-            height_ratio = (partition_summary - minimum) / extent
-            bar_index = int(height_ratio * (len(self.bars) - 1))
-            bar_color = blend_colors(min_color, max_color, height_ratio)
+            current_block_buckets = buckets[int(bucket_index)]
+            block_value = summary_function(current_block_buckets)
+
+            bar_block_value = min(max_bar_value, max(min_bar_value, block_value))
+            bar_index = min(
+                int((bar_block_value - min_bar_value) / bar_amplitude * (len(self.bars) - 1)),
+                len(self.bars) - 1,
+            )
+
+            color_block_value = min(max_color_value, max(min_color_value, block_value))
+            height_ratio = (color_block_value - min_color_value) / color_amplitude
+            bar_color = blend_colors(self.min_color.color, self.max_color.color, height_ratio**3)
             bars_rendered += 1
             bucket_index += step
-            yield Segment(
-                self.bars[min(bar_index, len(self.bars) - 1)], Style.from_color(bar_color)
-            )
+            yield Segment(self.bars[bar_index], Style.from_color(bar_color, self.bg_color))
