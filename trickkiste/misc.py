@@ -55,7 +55,13 @@ def log() -> logging.Logger:
 
 
 def throw(exception: BaseException) -> NoReturn:
-    """Function for throwing exceptions in order to become functional"""
+    """Function for throwing exceptions in order to become functional
+    >>> try:
+    ...     [1 / (x if x != 42 else throw(SystemExit)) for x in (23, 42, 401)]
+    ... except SystemExit:
+    ...     print("The question is '[retracted]'")
+    The question is '[retracted]'
+    """
     raise exception
 
 
@@ -138,6 +144,8 @@ def date_str(
     """Returns a uniform time string from a timestamp or a datetime
     >>> date_str(datetime.strptime("1980.01.04-12:55:02", "%Y.%m.%d-%H:%M:%S"))
     '1980.01.04-12:55:02'
+    >>> date_str(315834902)
+    '1980.01.04-12:55:02'
     """
     if not timestamp:
         return "--"
@@ -152,11 +160,13 @@ def date_str(
 
 
 def date_from(timestamp: float | str) -> None | datetime:
-    """
+    """Convenience date parser for a couple of time representations
     >>> str(date_from("2023-07-14T15:05:32.174200714+02:00"))
     '2023-07-14 15:05:32+02:00'
     >>> str(date_from("2023-07-24T21:25:26.89389821+02:00"))
     '2023-07-24 21:25:26+02:00'
+    >>> str(date_from(1758173336.9167209))
+    '2025-09-18 07:28:56.916721+02:00'
     """
     try:
         if isinstance(timestamp, datetime):
@@ -247,7 +257,10 @@ def smart_split(string: str, delimiter: str = ",") -> Iterator[str]:
 
 
 def multi_replace(string: str, *substitutions: tuple[str, str]) -> str:
-    """Returns @string with given list of @substituions applied using str.replace"""
+    """Returns @string with given list of @substituions applied using str.replace
+    >>> multi_replace("Mama", ("ma", "mr"), ("a", "i"), ("M", "B"), ("m", "e"))
+    'Bier'
+    """
     return reduce(lambda s, r: s.replace(*r), substitutions, string)
 
 
@@ -290,7 +303,10 @@ def compact_dict(
 
 
 def process_output(cmd: str) -> str:
-    """Return command output as one blob"""
+    """Return command output as one blob
+    >>> process_output("echo hello world").strip()
+    'hello world'
+    """
     return check_output(  # noqa: S603  # `subprocess` call: check for execution of untrusted input
         shlex.split(cmd),
         stderr=DEVNULL,
