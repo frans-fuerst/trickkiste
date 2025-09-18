@@ -1,6 +1,7 @@
-__pycache__
 *~
 ~*
+_UNTRACKED/
+__pycache__
 /.container_home_dir
 *.log
 /dist
