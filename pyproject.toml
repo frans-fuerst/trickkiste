@@ -13,8 +13,7 @@ dependencies = [
 suppress = 'trickkiste.std_suppress:main'
 
 [project.urls]
-#"Home Page" = "https://example.com"
-Repository = "https://projects.om-office.de/frans/trickkiste.git"
+Repository = "https://github.com/frans-fuerst/trickkiste"
 
 # see https://docs.astral.sh/uv/concepts/projects/dependencies/
 [dependency-groups]
