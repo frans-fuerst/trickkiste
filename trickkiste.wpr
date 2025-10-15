@@ -11,3 +11,7 @@ proj.directory-list = [{'dirloc': loc('.'),
                         'recursive': True,
                         'watch_for_changes': True}]
 proj.file-type = 'shared'
+proj.launch-config = {loc('trickkiste/examples/fancylogging.py'): ('project',
+        ('--log-file=fancy.log',
+         ''))}
+proj.main-file = loc('trickkiste/examples/fancylogging.py')

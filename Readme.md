@@ -78,20 +78,60 @@ See [License.md](License.md).
 ### Initialize
 
 ```bash
-git clone https://github.com/frans-fuerst/trickkiste
+git clone https://github.com/frans-fuerst/trickkiste --recurse-submodules
 cd trickkiste
 uv run pre-commit install
+```
+
+### Manually run checks and fixes
+
+Depending on your workflow / IDE you _might_ want to stay in charge over what's
+being executed in order to check and fix code validity. For a number of
+scenarios there is a bunch of scripts located in the `dev` submodule which just
+wrap manual calls to what would be done by `pre-commit`. Some actually run
+`pre-commit` for consistency, some don't in order to stay flexible regarding
+command line arguments, e.g. for unit-testing using `pytest`.
+
+*run all checks which would be executed on commit, but on unstaged stuff, too*
+```bash
+dev/check-validity
+```
+
+*do this in a loop (convenience wrapper around `inotifywait`)*
+```bash
+dev/watchandcheck
+```
+
+*run all checks separately*
+
+```bash
+dev/check-python-doctests
+dev/check-python-formatting
+dev/check-python-linting
+dev/check-python-systemtests
+dev/check-python-typing
+dev/check-python-unittests
+dev/check-shellscripts
+dev/check-yaml-linting
+```
+
+*apply fixes for automatically fixable stuff*
+
+```bash
+dev/fix-python-formatting
+dev/fix-python-linting
 ```
 
 ### Version bump and publishing
 
 ```bash
 uv version --bump <patch|minor|major>
+uv lock --upgrade
 uv build
 
 # do manual tests here
 
+git commit -m"Bump version [..]"
 git push
 uv publish --token <TOKEN>
 ```
-

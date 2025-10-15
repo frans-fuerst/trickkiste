@@ -44,7 +44,7 @@ from datetime import datetime
 from functools import partial, reduce, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
-from typing import NoReturn, ParamSpec, TypeVar
+from typing import NoReturn, ParamSpec
 
 from dateutil import tz
 
@@ -314,13 +314,12 @@ def process_output(cmd: str) -> str:
     )
 
 
-AsyncifyT = TypeVar("AsyncifyT")
 AsyncifyP = ParamSpec("AsyncifyP")
 
 
-def asyncify(
-    func: Callable[AsyncifyP, AsyncifyT],
-) -> Callable[AsyncifyP, Awaitable[AsyncifyT]]:
+def asyncify[**AsyncifyP, T](
+    func: Callable[AsyncifyP, T],
+) -> Callable[AsyncifyP, Awaitable[T]]:
     """Turns a synchronous function into an asynchronous one"""
 
     @wraps(func)
@@ -329,7 +328,7 @@ def asyncify(
         loop: None | asyncio.AbstractEventLoop = None,
         executor: None | Executor = None,
         **kwargs: AsyncifyP.kwargs,
-    ) -> AsyncifyT:
+    ) -> T:
         return await (loop or asyncio.get_event_loop()).run_in_executor(
             executor, partial(func, *args, **kwargs)
         )
@@ -337,25 +336,19 @@ def asyncify(
     return run  # type: ignore[return-value]  # (no clue yet how to solve this)
 
 
-ChainT = TypeVar("ChainT")
-
-
-async def async_chain(
-    iterator: AsyncIterable[Iterable[ChainT]],
-) -> AsyncIterable[ChainT]:
+async def async_chain[T](
+    iterator: AsyncIterable[Iterable[T]],
+) -> AsyncIterable[T]:
     """Turns a nested async iterable into a flattened iterable"""
     async for elems in iterator:
         for elem in elems:
             yield elem
 
 
-FilterT = TypeVar("FilterT")
-
-
-async def async_filter(
-    filter_fn: Callable[[FilterT], bool],
-    iterator: AsyncIterable[Iterable[FilterT]],
-) -> AsyncIterable[Iterable[FilterT]]:
+async def async_filter[T](
+    filter_fn: Callable[[T], bool],
+    iterator: AsyncIterable[Iterable[T]],
+) -> AsyncIterable[Iterable[T]]:
     """Applies filter() to nested iterables"""
     async for elems in iterator:
         # don't return empty lists
