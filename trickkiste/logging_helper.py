@@ -281,6 +281,15 @@ def set_log_levels(
                 for s in levels
                 if isinstance(s, tuple)
             }
+        case (others, (_logger, _level_spec), *_rest) if isinstance(
+            others, (str, int)
+        ):
+            others_level = others
+            levels_spec = {
+                s[0] if isinstance(s[0], str) else s[0].name: s[1]
+                for s in levels
+                if isinstance(s, tuple)
+            }
         case _:
             raise TypeError(f"unsupported arguments: {levels}")
 
