@@ -44,9 +44,12 @@ from datetime import datetime
 from functools import partial, reduce, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
-from typing import NoReturn, ParamSpec
+from typing import NoReturn, ParamSpec, TypeVar
 
 from dateutil import tz
+
+ReturnT = TypeVar("ReturnT")
+ArgumentsP = ParamSpec("ArgumentsP")
 
 
 def log() -> logging.Logger:
@@ -314,21 +317,18 @@ def process_output(cmd: str) -> str:
     )
 
 
-AsyncifyP = ParamSpec("AsyncifyP")
-
-
-def asyncify[**AsyncifyP, T](
-    func: Callable[AsyncifyP, T],
-) -> Callable[AsyncifyP, Awaitable[T]]:
+def asyncify(
+    func: Callable[ArgumentsP, ReturnT],
+) -> Callable[ArgumentsP, Awaitable[ReturnT]]:
     """Turns a synchronous function into an asynchronous one"""
 
     @wraps(func)
     async def run(  # type: ignore[valid-type]
-        *args: AsyncifyP.args,
+        *args: ArgumentsP.args,
         loop: None | asyncio.AbstractEventLoop = None,
         executor: None | Executor = None,
-        **kwargs: AsyncifyP.kwargs,
-    ) -> T:
+        **kwargs: ArgumentsP.kwargs,
+    ) -> ReturnT:
         return await (loop or asyncio.get_event_loop()).run_in_executor(
             executor, partial(func, *args, **kwargs)
         )
@@ -336,19 +336,19 @@ def asyncify[**AsyncifyP, T](
     return run  # type: ignore[return-value]  # (no clue yet how to solve this)
 
 
-async def async_chain[T](
-    iterator: AsyncIterable[Iterable[T]],
-) -> AsyncIterable[T]:
+async def async_chain(
+    iterator: AsyncIterable[Iterable[ReturnT]],
+) -> AsyncIterable[ReturnT]:
     """Turns a nested async iterable into a flattened iterable"""
     async for elems in iterator:
         for elem in elems:
             yield elem
 
 
-async def async_filter[T](
-    filter_fn: Callable[[T], bool],
-    iterator: AsyncIterable[Iterable[T]],
-) -> AsyncIterable[Iterable[T]]:
+async def async_filter(
+    filter_fn: Callable[[ReturnT], bool],
+    iterator: AsyncIterable[Iterable[ReturnT]],
+) -> AsyncIterable[Iterable[ReturnT]]:
     """Applies filter() to nested iterables"""
     async for elems in iterator:
         # don't return empty lists
