@@ -106,6 +106,7 @@ ignore = [
     "D400",     # First line should end with a period
     "D401",     # First line of docstring should be in imperative mood: "Adds generator created from @player_definition_fn to new track definition"
     "D415",     # First line should end with a period, question mark, or exclamation point
+    "EM101",    # Exception must not use a string literal
     "EM102",    # Exception must not use an f-string literal, assign to variable first
     "EXE001",   # Shebang is present but file is not executable
     "S101",     # Use of `assert` detected

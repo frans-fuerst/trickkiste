@@ -30,10 +30,12 @@ import logging
 import os
 import re
 import shlex
+import time
 from collections.abc import (
     AsyncIterable,
     Awaitable,
     Callable,
+    Coroutine,
     Iterable,
     Iterator,
     Mapping,
@@ -44,7 +46,13 @@ from datetime import datetime
 from functools import partial, reduce, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
-from typing import NoReturn, ParamSpec, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    NoReturn,
+    ParamSpec,
+    TypeVar,
+    overload,
+)
 
 from dateutil import tz
 
@@ -334,6 +342,137 @@ def asyncify(
         )
 
     return run  # type: ignore[return-value]  # (no clue yet how to solve this)
+
+
+if TYPE_CHECKING:
+
+    @overload
+    def awatch_duration(
+        function: (Callable[ArgumentsP, Awaitable[ReturnT]]),
+        *,
+        warn_timeout: float = 1.0,
+    ) -> Callable[ArgumentsP, Coroutine[None, None, ReturnT]]: ...
+
+    @overload
+    def awatch_duration(
+        *,
+        warn_timeout: float = 1.0,
+    ) -> Callable[
+        [Callable[ArgumentsP, Awaitable[ReturnT]]],
+        Callable[ArgumentsP, Coroutine[None, None, ReturnT]],
+    ]: ...
+
+
+def awatch_duration(
+    function: (Callable[ArgumentsP, Awaitable[ReturnT]] | None) = None,
+    *,
+    warn_timeout: float = 1.0,
+) -> (
+    Callable[
+        [Callable[ArgumentsP, Awaitable[ReturnT]]],
+        Callable[ArgumentsP, Coroutine[None, None, ReturnT]],
+    ]
+    | Callable[ArgumentsP, Coroutine[None, None, ReturnT]]
+):
+    """Decorator for async functions which must not take too long to finish"""
+
+    def decorator(
+        afunc: Callable[ArgumentsP, Awaitable[ReturnT]],
+    ) -> Callable[ArgumentsP, Coroutine[None, None, ReturnT]]:
+        @wraps(afunc)
+        async def decorated(
+            *args: ArgumentsP.args, **kwargs: ArgumentsP.kwargs
+        ) -> ReturnT:
+            time_start = time.time()
+            result = await afunc(*args, **kwargs)
+            duration = time.time() - time_start
+            if duration > warn_timeout:
+                log().warning("%s took %.2fms", afunc, duration * 1000)
+            return result
+
+        return decorated
+
+    if function is None:
+        return decorator
+    return decorator(function)
+
+
+_default_logger = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+
+    @overload
+    def async_retry(
+        function: Callable[ArgumentsP, Awaitable[ReturnT]],
+        *,
+        exceptions: type[BaseException] = Exception,
+        tries: int = -1,
+        delay: float = 0,
+        logger: logging.Logger = _default_logger,
+    ) -> Callable[ArgumentsP, Coroutine[None, None, ReturnT]]: ...
+
+    @overload
+    def async_retry(
+        *,
+        exceptions: type[BaseException] = Exception,
+        tries: int = -1,
+        delay: float = 0,
+        logger: logging.Logger = _default_logger,
+    ) -> Callable[
+        [Callable[ArgumentsP, Awaitable[ReturnT]]],
+        Callable[ArgumentsP, Coroutine[None, None, ReturnT]],
+    ]: ...
+
+
+def async_retry(
+    function: Callable[ArgumentsP, Awaitable[ReturnT]] | None = None,
+    *,
+    exceptions: type[BaseException] = Exception,
+    tries: int = -1,
+    delay: float = 0,
+    logger: logging.Logger = _default_logger,
+) -> (
+    Callable[
+        [Callable[ArgumentsP, Awaitable[ReturnT]]],
+        Callable[ArgumentsP, Coroutine[None, None, ReturnT]],
+    ]
+    | Callable[ArgumentsP, Coroutine[None, None, ReturnT]]
+):
+    """Decorator for async functions which have to be retried on error"""
+
+    def decorator(
+        afunc: Callable[ArgumentsP, Awaitable[ReturnT]],
+    ) -> Callable[ArgumentsP, Coroutine[None, None, ReturnT]]:
+        @wraps(afunc)
+        async def decorated(
+            *args: ArgumentsP.args, **kwargs: ArgumentsP.kwargs
+        ) -> ReturnT:
+            attempt = 0
+            while True:
+                attempt += 1
+                try:
+                    return await afunc(*args, **kwargs)
+                except exceptions as exc:
+                    if attempt == tries:
+                        raise
+                    if logger is not None:
+                        logger.warning(
+                            "%s raised an exception %d times now (this time: %r)."
+                            " retrying in %s seconds...",
+                            afunc,
+                            attempt,
+                            exc,
+                            delay,
+                        )
+                    await asyncio.sleep(delay)
+            raise RuntimeError("make ruff(RET503) and mypy (return) happy")
+
+        return decorated
+
+    if function is None:
+        return decorator
+    return decorator(function)
 
 
 async def async_chain(
