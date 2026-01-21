@@ -275,16 +275,20 @@ def multi_replace(string: str, *substitutions: tuple[str, str]) -> str:
     return reduce(lambda s, r: s.replace(*r), substitutions, string)
 
 
-def split_params(string: str) -> Mapping[str, str]:
+def split_params(
+    string: str, delimiter: str = ",", assign_char: str = "="
+) -> Mapping[str, str]:
     """Splits a 'string packed map' into a dict
     >>> split_params("foo=23,bar=42,true='pi=3,14'")
+    {'foo': '23', 'bar': '42', 'true': "'pi=3,14'"}
+    >>> split_params("foo:23;bar:42;true:'pi=3,14'", delimiter=";", assign_char=":")
     {'foo': '23', 'bar': '42', 'true': "'pi=3,14'"}
     """
     return {
         k: v
-        for p in smart_split(string, ",")
+        for p in smart_split(string, delimiter)
         if p
-        for k, v in (p.split("=", 1),)
+        for k, v in (p.split(assign_char, 1),)
     }
 
 
