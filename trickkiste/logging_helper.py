@@ -35,7 +35,6 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from rich.console import Console
-from rich.logging import RichHandler
 from rich.markup import escape as markup_escape
 
 LOG_LEVELS = ("ALL_DEBUG", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL")
@@ -137,6 +136,19 @@ def logger_levelname_filter(record: logging.LogRecord) -> bool:
     return True
 
 
+class FluidRichHandler(logging.Handler):
+    """Simple replacement for RichHandler which doesn't add padding"""
+
+    def __init__(self, console: Console) -> None:
+        """Initialises a logging.Handler which uses rich.Console"""
+        super().__init__()
+        self._console = console
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Just use rich markup to print a log line"""
+        self._console.print(self.format(record))
+
+
 def setup_logging(  # pylint: disable=too-many-arguments
     logger: logging.Logger | str,
     *,
@@ -153,12 +165,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
     """Make logging fun"""
     if not logging.getLogger().hasHandlers():
         setup_logging_handler(
-            RichHandler(
-                show_level=False,
-                show_time=False,
-                omit_repeated_times=True,
-                show_path=False,
-                markup=True,
+            FluidRichHandler(
                 console=Console(
                     # rich defaults to stdout even for logging so we have to fix it here
                     stderr=True,
@@ -172,7 +179,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
                         if sys.stdout.isatty() or os.getenv("FORCE_COLOR")
                         else None
                     ),
-                ),
+                )
             ),
             show_level,
             show_time,
