@@ -37,7 +37,15 @@ from pathlib import Path
 from rich.console import Console
 from rich.markup import escape as markup_escape
 
-LOG_LEVELS = ("ALL_DEBUG", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL")
+LOG_LEVELS = (
+    "ALL_DEBUG",
+    "DEBUG",
+    "INFO",
+    "WARN",
+    "WARNING",
+    "ERROR",
+    "CRITICAL",
+)
 SHORT_COLOR_LEVEL_NAMES = {
     "NOTSET": "[dim]NN[/]",
     "DEBUG": "[green]DD[/]",
@@ -91,7 +99,9 @@ def markup_escape_filter(record: logging.LogRecord) -> bool:
         markup_escape(arg) if isinstance(arg, str) else arg
         for arg in record.args
     )
-    record.msg = markup_escape(record.msg)
+    record.msg = (
+        markup_escape(record.msg) if isinstance(record.msg, str) else record.msg
+    )
     return True
 
 
@@ -132,7 +142,9 @@ def logger_levelname_filter(record: logging.LogRecord) -> bool:
     # another approach would be to register styles for
     # logging.level.<SHORTNAME> and set
     # record.levelname = <SHORTNAME>
-    record.shortlevelname = SHORT_COLOR_LEVEL_NAMES[record.levelname]
+    record.shortlevelname = SHORT_COLOR_LEVEL_NAMES.get(
+        record.levelname, markup_escape(record.levelname)
+    )
     return True
 
 
