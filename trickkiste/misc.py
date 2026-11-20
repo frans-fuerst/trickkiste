@@ -106,6 +106,8 @@ def dur_str(seconds: float, fixed: bool = False) -> str:
     '42s'
     >>> dur_str(12345)
     '3h:25m:45s'
+    >>> dur_str(12345, fixed=True)
+    '00d:03h:25m:45s'
     """
     if not fixed and not seconds:
         return "0s"
@@ -126,9 +128,7 @@ def dur_str(seconds: float, fixed: bool = False) -> str:
         else ""
     )
     seconds_str = (
-        f"{int(seconds % 60):0{digits}d}s"
-        if not fixed and ((seconds % 60) or seconds == 0)
-        else ""
+        f"{int(seconds % 60):0{digits}d}s" if fixed or seconds % 60 else ""
     )
     return ":".join(e for e in (days, hours, minutes, seconds_str) if e)
 
@@ -144,7 +144,7 @@ def age_str(
         return "--"
     age_ts = age.timestamp() if isinstance(age, datetime) else age
     now_ts = now.timestamp() if isinstance(now, datetime) else now
-    if (age_ts or now_ts) <= 0.0:
+    if min(age_ts, now_ts) <= 0.0:
         return "--"
     return dur_str(now_ts - age_ts, fixed=fixed)
 
@@ -222,19 +222,21 @@ def parse_age(string: str) -> int:
     number = r"\d*(?:\.(?:\d*)?)?"
     with suppress(ValueError):
         return int(string)
-    if match := re.match(
-        (
-            "(?i)^"
-            f"(?:({number})d)?"
-            "(?::)?"
-            f"(?:({number})h)?"
-            "(?::)?"
-            f"(?:({number})m)?"
-            "(?::)?"
-            f"(?:({number})s)?$"
-        ),
-        string,
-    ):
+    if (
+        match := re.match(
+            (
+                "(?i)^"
+                f"(?:({number})d)?"
+                "(?::)?"
+                f"(?:({number})h)?"
+                "(?::)?"
+                f"(?:({number})m)?"
+                "(?::)?"
+                f"(?:({number})s)?$"
+            ),
+            string,
+        )
+    ) and any(match.groups()):
         days, hours, mins, secs = match.groups()
         return int(
             float(days or "0") * 86400
@@ -249,6 +251,8 @@ def smart_split(string: str, delimiter: str = ",") -> Iterator[str]:
     r"""Like str.split but takes quotes and parenthesis into account
     >>> list(smart_split("(=,),'a=x',\"b=y\""))
     ['(=,)', "'a=x'", '"b=y"']
+    >>> list(smart_split("a='(',b=1"))
+    ["a='('", 'b=1']
     """
     splits: list[int] = []
     closers: list[str] = []
@@ -258,7 +262,7 @@ def smart_split(string: str, delimiter: str = ",") -> Iterator[str]:
             splits.append(i)
         elif closers and char == closers[-1]:
             closers.pop()
-        elif char in parenthizers:
+        elif char in parenthizers and not (closers and closers[-1] in "\"'"):
             closers.append(parenthizers[char])
     start = 0
     for pos in splits:
