@@ -456,7 +456,8 @@ def copy_text(app: App[Any], text: str, *, notify: bool = True) -> bool:
 # returns, erase and cursor sequences. A full-screen UI must not let the
 # terminal act on them, or its own frame is what gets erased.
 _OSC = re.compile(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")  # window title etc.
-_C0 = re.compile(r"[\x00-\x08\x0b\x0c\x0e\x0f\x7f]")  # keeps \t, \n and ESC
+# all C0 codes and DEL, but \t, \n and ESC (\r is replaced explicitly)
+_C0 = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f]")
 
 
 def clean_line(raw: str) -> Text:
@@ -465,6 +466,8 @@ def clean_line(raw: str) -> Text:
 
     >>> clean_line("\x1b]0;title\x07\x1b[31mred\x1b[0m\rdone\x08").plain
     'reddone'
+    >>> clean_line("a\x10b\x1ac\x1fd").plain
+    'abcd'
     >>> str(clean_line("\x1b[31mred\x1b[0m").spans[0].style.color.name)
     'color(1)'
     """
