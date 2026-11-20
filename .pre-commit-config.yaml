@@ -101,7 +101,6 @@ repos:
           # also covered by dev/check-python-unittests
           - name: Python Unit Tests
             id: check-python-unittest
-            stages: [manual]  # no unit tests yet
             language: system
             entry: uv run pytest
             args: [-m unit]
