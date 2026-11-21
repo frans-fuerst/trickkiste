@@ -18,8 +18,13 @@ must depend on them themselves.
 | `tui_widgets.py`    | splitters, `StatusBar`, clipboard, `clean_line`,        |
 |                     | `scanner`, `ConfirmScreen`, alerting log handler        |
 | `std_suppress.py`   | `suppress <timeout> <cmd...>` console script            |
+| `examples/`         | `fancytui.py` showcases every TUI feature (keys in its  |
+|                     | docstring) - extend it when adding widgets              |
 
 ## Checks
+
+Headless check of the example (Textual pilot, no terminal needed):
+`app.run_test(size=(120, 40))`, `pilot.press(...)`, `app.save_screenshot()`.
 
     uv run pre-commit run --all-files     # ruff, mypy, doctests, unit tests
     uv run pytest -m unit                 # tests in test/
