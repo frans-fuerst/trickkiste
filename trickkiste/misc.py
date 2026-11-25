@@ -76,7 +76,7 @@ def throw(exception: BaseException) -> NoReturn:
     raise exception
 
 
-def md5from(filepath: Path) -> None | str:
+def md5from(filepath: Path) -> str | None:
     """Returns an MD5 sum from contents of file provided"""
     with suppress(FileNotFoundError):
         with filepath.open("rb") as input_file:
@@ -134,7 +134,7 @@ def dur_str(seconds: float, fixed: bool = False) -> str:
 
 
 def age_str(
-    now: float | datetime, age: None | int | datetime, fixed: bool = False
+    now: float | datetime, age: int | datetime | None, fixed: bool = False
 ) -> str:
     """Turn a number of seconds into something human readable
     >>> age_str(1700000000, 1600000000)
@@ -170,7 +170,7 @@ def date_str(
     return (date_dt).strftime(datefmt)
 
 
-def date_from(timestamp: float | str) -> None | datetime:
+def date_from(timestamp: float | str) -> datetime | None:
     """Convenience date parser for a couple of time representations
     >>> str(date_from("2023-07-14T15:05:32.174200714+02:00"))
     '2023-07-14 15:05:32+02:00'
@@ -299,7 +299,7 @@ def split_params(
 def compact_dict(
     mapping: Mapping[str, float | str],
     *,
-    maxlen: None | int = 10,
+    maxlen: int | None = 10,
     delim: str = ", ",
 ) -> str:
     """Turns a dict into a 'string packed map' (for making a dict human readable)
@@ -341,8 +341,8 @@ def asyncify(
     @wraps(func)
     async def run(  # type: ignore[valid-type]
         *args: ArgumentsP.args,
-        loop: None | asyncio.AbstractEventLoop = None,
-        executor: None | Executor = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+        executor: Executor | None = None,
         **kwargs: ArgumentsP.kwargs,
     ) -> ReturnT:
         return await (loop or asyncio.get_event_loop()).run_in_executor(
