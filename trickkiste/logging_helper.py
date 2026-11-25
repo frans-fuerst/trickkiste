@@ -240,7 +240,7 @@ def setup_logging(  # pylint: disable=too-many-arguments
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
 
-def setup_logging_handler(
+def setup_logging_handler(  # noqa: PLR0917 - positional callers exist
     handler: logging.Handler,
     show_level: bool,
     show_time: bool,

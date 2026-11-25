@@ -7,3 +7,5 @@ __pycache__
 /dist
 /build
 *.wpu
+/worklog.md
+/prompts.md
