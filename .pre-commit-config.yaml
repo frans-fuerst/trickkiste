@@ -103,7 +103,7 @@ repos:
             id: check-python-unittest
             language: system
             entry: uv run pytest
-            args: [-m unit]
+            args: [-m, unit]
             types: [python]
             # https://github.com/pytest-dev/pytest/discussions/7793
             pass_filenames: false
@@ -115,7 +115,7 @@ repos:
             stages: [manual]  # system tests should not run automatically
             language: system
             entry: uv run pytest
-            args: [-m system]
+            args: [-m, system]
             types: [python]
             # https://github.com/pytest-dev/pytest/discussions/7793
             pass_filenames: false
