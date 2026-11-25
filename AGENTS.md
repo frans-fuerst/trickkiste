@@ -55,3 +55,12 @@ Headless check of the example (Textual pilot, no terminal needed):
   wait for all of them.
 - `if x := f() and g(x)` binds `f() and g(x)` - parenthesise the walrus.
 - Ruff has no `# ruff: <rule>` comment directive (RUF103).
+- Exception and stack text are no rich markup: both `FluidRichHandler` and
+  `RichLogHandler` format `without_exc(record)` as markup and print
+  `exc_text(...)` as plain `Text`. Feeding a traceback containing `[/]` to
+  rich raises `MarkupError`. Errors in `emit` go to `handleError`.
+- `setup_logging_handler` keeps its positional parameters on purpose
+  (external callers), hence `noqa: PLR0917`.
+- `uv.lock` updates may bring new ruff rules (RUF036, CPY001, PLR0917
+  came with ruff 0.17) and rich behaviour changes (`Text.from_ansi` now
+  keeps `\n`).
