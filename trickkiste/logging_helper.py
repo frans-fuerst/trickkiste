@@ -36,6 +36,7 @@ from pathlib import Path
 
 from rich.console import Console
 from rich.markup import escape as markup_escape
+from rich.text import Text
 
 LOG_LEVELS = (
     "ALL_DEBUG",
@@ -148,6 +149,32 @@ def logger_levelname_filter(record: logging.LogRecord) -> bool:
     return True
 
 
+def without_exc(record: logging.LogRecord) -> logging.LogRecord:
+    """A copy of @record without exception and stack, which are no markup"""
+    return logging.makeLogRecord(
+        {
+            **record.__dict__,
+            "exc_info": None,
+            "exc_text": None,
+            "stack_info": None,
+        }
+    )
+
+
+def exc_text(record: logging.LogRecord, formatter: logging.Formatter) -> str:
+    """Exception and stack of @record as @formatter would append them"""
+    return "\n".join(
+        filter(
+            None,
+            (
+                (record.exc_info and formatter.formatException(record.exc_info))
+                or record.exc_text,
+                record.stack_info and formatter.formatStack(record.stack_info),
+            ),
+        )
+    )
+
+
 class FluidRichHandler(logging.Handler):
     """Simple replacement for RichHandler which doesn't add padding"""
 
@@ -157,8 +184,13 @@ class FluidRichHandler(logging.Handler):
         self._console = console
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Just use rich markup to print a log line"""
-        self._console.print(self.format(record))
+        """Prints the log line as rich markup, exception and stack plain"""
+        try:
+            self._console.print(self.format(without_exc(record)))
+            if extra := exc_text(record, self.formatter or logging.Formatter()):
+                self._console.print(Text(extra))
+        except Exception:  # noqa: BLE001 - like logging.StreamHandler
+            self.handleError(record)
 
 
 def setup_logging(  # pylint: disable=too-many-arguments

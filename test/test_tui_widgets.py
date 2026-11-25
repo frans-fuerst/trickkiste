@@ -170,10 +170,21 @@ def test_tui_log_escapes_once_and_alerts() -> None:
             logging.getLogger("t").info("[red] %s", "[b]")
             logging.getLogger("t").warning("w")
             logging.getLogger("t").error(42)
+            try:
+                {}["[/]"]  # noqa: B018
+            except KeyError:
+                logging.getLogger("t").exception("tb")
             await pilot.pause()
             lines = [strip.text.rstrip() for strip in app._richlog.lines]  # noqa: SLF001
             return lines, app.alerts
 
     lines, alerts = asyncio.run(scenario())
-    assert [line.split("│ ")[-1] for line in lines] == ["[red] [b]", "w", "42"]
-    assert alerts == [logging.WARNING, logging.ERROR]
+    assert [line.split("│ ")[-1] for line in lines[:4]] == [
+        "[red] [b]",
+        "w",
+        "42",
+        "tb",
+    ]
+    assert lines[4] == "Traceback (most recent call last):"
+    assert lines[-1] == "KeyError: '[/]'"
+    assert alerts == [logging.WARNING, logging.ERROR, logging.ERROR]

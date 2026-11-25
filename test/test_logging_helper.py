@@ -1,12 +1,15 @@
 """Unit tests for trickkiste.logging_helper"""
 
+import io
 import logging
 from argparse import ArgumentParser
 from collections.abc import Iterator
 
 import pytest
+from rich.console import Console
 
 from trickkiste.logging_helper import (
+    FluidRichHandler,
     apply_common_logging_cli_args,
     logger_levelname_filter,
     markup_escape_filter,
@@ -109,3 +112,34 @@ def test_set_log_levels() -> None:
 
     with pytest.raises(TypeError, match="unsupported"):
         set_log_levels()
+
+
+def test_fluid_handler_prints_tracebacks_plain() -> None:
+    root = logging.getLogger()
+    saved = root.handlers[:], root.level
+    root.handlers = []
+    console = Console(file=io.StringIO(), width=200, color_system=None)
+    setup_logging_handler(
+        FluidRichHandler(console),
+        show_level=False,
+        show_time=False,
+        show_name=False,
+        show_callstack=False,
+        show_funcname=False,
+        show_tid=False,
+        show_linenumber=False,
+    )
+    root.setLevel(logging.DEBUG)
+    try:
+        try:
+            {}["[/]"]  # noqa: B018
+        except KeyError:
+            logging.getLogger("t").exception("lookup [failed]")
+        logging.getLogger("t").warning("stack", stack_info=True)
+    finally:
+        root.handlers, _ = saved
+        root.setLevel(saved[1])
+    output = console.file.getvalue()  # type: ignore[attr-defined]
+    assert output.startswith("lookup [failed]\nTraceback")
+    assert "KeyError: '[/]'" in output
+    assert "\nstack\nStack (most recent call last):" in output

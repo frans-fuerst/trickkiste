@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 import asyncio
 import logging
 from argparse import ArgumentParser
-from contextlib import suppress
 from pathlib import Path
 
 from rich.color import Color
@@ -53,9 +52,11 @@ from textual.widgets import Label, RichLog
 from .logging_helper import (
     LogLevelSpec,
     apply_common_logging_cli_args,
+    exc_text,
     markup_escape_filter,
     set_log_levels,
     setup_logging_handler,
+    without_exc,
 )
 
 
@@ -82,17 +83,26 @@ class RichLogHandler(RichHandler):
         self.addFilter(markup_escape_filter)
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Writes the (escaped by filter) logging message to the widget"""
-        with suppress(NoActiveAppError):
+        """Writes the (escaped by filter) logging message to the widget,
+        exception and stack as plain text
+        """
+        try:
+            plain = without_exc(record)
             self.widget.write(
                 self.render(
                     record=record,
                     message_renderable=self.render_message(
-                        record, self.format(record)
+                        plain, self.format(plain)
                     ),
                     traceback=None,
                 )
             )
+            if extra := exc_text(record, self.formatter or logging.Formatter()):
+                self.widget.write(Text(extra))
+        except NoActiveAppError:
+            pass  # logging after the app has gone
+        except Exception:  # noqa: BLE001 - like logging.StreamHandler
+            self.handleError(record)
 
 
 class LockingRichLog(RichLog):
