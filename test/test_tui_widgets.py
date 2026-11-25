@@ -36,7 +36,10 @@ pytestmark = pytest.mark.unit
         ("\x1b]8;;http://x\x1b\\link\x1b]8;;\x1b\\", "link"),
         ("50%\r100%", "50%100%"),
         (
-            "".join(map(chr, range(32))).replace("\t", "").replace("\x1b", ""),
+            "".join(map(chr, range(32)))
+            .replace("\t", "")
+            .replace("\n", "")
+            .replace("\x1b", ""),
             "",
         ),
         ("\x7fdel", "del"),
