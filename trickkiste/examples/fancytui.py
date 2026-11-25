@@ -39,6 +39,7 @@ l folds the log, q asks (`ConfirmScreen`) before quitting
 import asyncio
 import logging
 import math
+from contextlib import suppress
 from typing import ClassVar
 
 from rich.color import ANSI_COLOR_NAMES
@@ -198,7 +199,8 @@ class ExampleTUI(TuiBaseApp):
             while line := await process.stdout.readline():
                 self.foreign.write(clean_line(line.decode(errors="replace")))
         finally:
-            process.kill()  # it loops forever, the app doesn't
+            with suppress(ProcessLookupError):
+                process.kill()  # it loops forever, the app doesn't
 
     @work(exit_on_error=True)
     async def produce(self) -> None:
