@@ -59,6 +59,11 @@ Headless check of the example (Textual pilot, no terminal needed):
   `RichLogHandler` format `without_exc(record)` as markup and print
   `exc_text(...)` as plain `Text`. Feeding a traceback containing `[/]` to
   rich raises `MarkupError`. Errors in `emit` go to `handleError`.
+- Committing: pre-commit refuses to run (and `git commit` fails) while
+  `.pre-commit-config.yaml` has unstaged changes - commit it first or
+  park it. Hooks call `uv run` without `--frozen` on the stashed tree, so
+  they lint with the ruff of the *committed* `uv.lock`: a `noqa` for a rule
+  only a newer ruff knows fails as RUF100 until the lock update is in.
 - `setup_logging_handler` keeps its positional parameters on purpose
   (external callers), hence `noqa: PLR0917`.
 - `uv.lock` updates may bring new ruff rules (RUF036, CPY001, PLR0917
