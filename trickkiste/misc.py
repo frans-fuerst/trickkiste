@@ -42,7 +42,7 @@ from collections.abc import (
 )
 from concurrent.futures import Executor
 from contextlib import contextmanager, suppress
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import partial, reduce, wraps
 from pathlib import Path
 from subprocess import DEVNULL, check_output
@@ -53,8 +53,6 @@ from typing import (
     TypeVar,
     overload,
 )
-
-from dateutil import tz
 
 ReturnT = TypeVar("ReturnT")
 ArgumentsP = ParamSpec("ArgumentsP")
@@ -163,7 +161,7 @@ def date_str(
     date_dt = (
         timestamp
         if isinstance(timestamp, datetime)
-        else datetime.fromtimestamp(timestamp, tz=tz.tzlocal())
+        else datetime.fromtimestamp(timestamp, tz=timezone.utc).astimezone()
     )
     if date_dt.year < 1000:
         return "--"
@@ -184,13 +182,15 @@ def date_from(timestamp: float | str) -> datetime | None:
             return timestamp
 
         if isinstance(timestamp, (int, float)):
-            return datetime.fromtimestamp(timestamp, tz=tz.tzlocal())
+            return datetime.fromtimestamp(
+                timestamp, tz=timezone.utc
+            ).astimezone()
 
         if timestamp[-1] == "Z":
             return (
                 datetime.strptime(timestamp[:19], "%Y-%m-%dT%H:%M:%S")
-                .replace(tzinfo=tz.tzutc())
-                .astimezone(tz.tzlocal())
+                .replace(tzinfo=timezone.utc)
+                .astimezone()
             )
         if re.match(
             r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2}$",

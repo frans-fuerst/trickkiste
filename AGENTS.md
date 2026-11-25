@@ -3,9 +3,12 @@
 ## Project
 
 `trickkiste` is a grab bag of small Python helpers (3.10+), managed with
-`uv`. Only `python-dateutil` is a runtime dependency; `rich` and `textual`
-are dev-only on purpose (see `pyproject.toml`), consumers of the TUI parts
-must depend on them themselves.
+`uv`. It has *no* runtime dependencies, keep it that way: Checkmk's system
+tests `pip install` / `pip uninstall` it as a sample wheel, and uninstall
+leaves dependencies behind (a date library was dropped for that, use
+`datetime.fromtimestamp(ts).astimezone()` for local time). `rich` and
+`textual` are dev-only on purpose (see `pyproject.toml`), consumers of the
+TUI parts must depend on them themselves.
 
 | Module              | Content                                                 |
 |---------------------|---------------------------------------------------------|
