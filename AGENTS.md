@@ -19,7 +19,9 @@ TUI parts must depend on them themselves.
 | `base_tui_app.py`   | `TuiBaseApp` (Textual app with a log pane),             |
 |                     | `RichLogHandler`, `HeatBar`                             |
 | `tui_widgets.py`    | splitters, `StatusBar`, clipboard, `clean_line`,        |
-|                     | `scanner`, `ConfirmScreen`, alerting log handler        |
+|                     | `scanner`, `ConfirmScreen`, alerting log handler,       |
+|                     | a tool's frame (`tool_frame`, `FramedApp`: header,      |
+|                     | feedback button + `FeedbackScreen`), `package_version`  |
 | `std_suppress.py`   | `suppress <timeout> <cmd...>` console script            |
 | `examples/`         | `fancytui.py` showcases every TUI feature (keys in its  |
 |                     | docstring) - extend it when adding widgets              |
